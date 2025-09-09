@@ -1,0 +1,176 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: waha-mongodb-dev
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: wahadev123
+      MONGO_INITDB_DATABASE: waha_dev
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_dev_data:/data/db
+    networks:
+      - waha-dev-network
+
+  # Redis Cache
+  redis:
+    image: redis:7.2-alpine
+    container_name: waha-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - waha-dev-network
+
+  # Backend API
+  backend-api:
+    build:
+      context: ../backend-api
+      dockerfile: Dockerfile.dev
+    container_name: waha-backend-dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      MONGODB_URI: mongodb://admin:wahadev123@mongodb:27017/waha_dev?authSource=admin
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: waha-dev-jwt-secret-2024
+      CORS_ORIGIN: http://localhost:3000,http://localhost:3001
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      - ../backend-api:/app
+      - /app/node_modules
+    networks:
+      - waha-dev-network
+
+  # Web Application
+  web-app:
+    build:
+      context: ../web-app
+      dockerfile: Dockerfile.dev
+    container_name: waha-web-dev
+    restart: unless-stopped
+    environment:
+      REACT_APP_API_URL: http://localhost:5000/api
+      REACT_APP_SOCKET_URL: http://localhost:5000
+      REACT_APP_ENV: development
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend-api
+    volumes:
+      - ../web-app:/app
+      - /app/node_modules
+    networks:
+      - waha-dev-network
+
+  # Marketing Website
+  marketing-site:
+    build:
+      context: ../marketing-site
+      dockerfile: Dockerfile.dev
+    container_name: waha-marketing-dev
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:5000/api
+      NEXT_PUBLIC_WEB_APP_URL: http://localhost:3000
+    ports:
+      - "3001:3000"
+    volumes:
+      - ../marketing-site:/app
+      - /app/node_modules
+    networks:
+      - waha-dev-network
+
+  # Admin Panel
+  admin-panel:
+    build:
+      context: ../admin-panel
+      dockerfile: Dockerfile.dev
+    container_name: waha-admin-dev
+    restart: unless-stopped
+    environment:
+      REACT_APP_API_URL: http://localhost:5000/api
+      REACT_APP_ENV: development
+    ports:
+      - "3002:3000"
+    depends_on:
+      - backend-api
+    volumes:
+      - ../admin-panel:/app
+      - /app/node_modules
+    networks:
+      - waha-dev-network
+
+  # AI Services (Python)
+  ai-services:
+    build:
+      context: ../ai-services
+      dockerfile: Dockerfile.dev
+    container_name: waha-ai-dev
+    restart: unless-stopped
+    environment:
+      PYTHON_ENV: development
+      API_URL: http://backend-api:5000/api
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - backend-api
+    volumes:
+      - ../ai-services:/app
+    networks:
+      - waha-dev-network
+
+  # Elasticsearch (for search)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: waha-elasticsearch-dev
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_dev_data:/usr/share/elasticsearch/data
+    networks:
+      - waha-dev-network
+
+  # Nginx (Development Proxy)
+  nginx:
+    image: nginx:alpine
+    container_name: waha-nginx-dev
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - web-app
+      - marketing-site
+      - backend-api
+      - admin-panel
+    networks:
+      - waha-dev-network
+
+volumes:
+  mongodb_dev_data:
+  redis_dev_data:
+  elasticsearch_dev_data:
+
+networks:
+  waha-dev-network:
+    driver: bridge

@@ -1,0 +1,45 @@
+{
+  "name": "upflyover-platform-ecosystem",
+  "version": "1.0.0",
+  "description": "Complete Upflyover B2B Platform Ecosystem",
+  "private": true,
+  "workspaces": [
+    "web-app",
+    "backend-api",
+    "marketing-site",
+    "admin-panel",
+    "shared/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run backend:dev\" \"npm run web:dev\" \"npm run marketing:dev\"",
+    "backend:dev": "cd backend-api && npm run dev",
+    "web:dev": "cd web-app && npm start",
+    "marketing:dev": "cd marketing-site && npm run dev",
+    "admin:dev": "cd admin-panel && npm run dev",
+    "mobile:dev": "cd mobile-app && flutter run",
+    "build:all": "npm run backend:build && npm run web:build && npm run marketing:build",
+    "test:all": "npm run backend:test && npm run web:test",
+    "deploy:staging": "npm run build:all && ./scripts/deploy-staging.sh",
+    "deploy:production": "npm run build:all && ./scripts/deploy-production.sh",
+    "setup:dev": "./scripts/setup-development.sh",
+    "docker:up": "docker-compose -f infrastructure/docker-compose.dev.yml up -d",
+    "docker:down": "docker-compose -f infrastructure/docker-compose.dev.yml down"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0",
+    "prettier": "^3.1.1"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,css,md}": [
+      "prettier --write",
+      "git add"
+    ]
+  }
+}
