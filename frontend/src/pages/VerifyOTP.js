@@ -132,6 +132,15 @@ const VerifyOTP = () => {
     }
   };
 
+  // Check if we can proceed with single verification
+  const canProceedWithSingle = emailVerified || phoneVerified;
+
+  const proceedWithSingleVerification = () => {
+    if (canProceedWithSingle) {
+      completeVerification();
+    }
+  };
+
   const resendOTP = async (type) => {
     setResendLoading({ ...resendLoading, [type]: true });
     
@@ -285,6 +294,27 @@ const VerifyOTP = () => {
                 Both email and phone verified successfully! Completing your registration...
               </Alert>
               <CircularProgress />
+            </Box>
+          )}
+
+          {canProceedWithSingle && !(emailVerified && phoneVerified) && (
+            <Box sx={{ mt: 3, textAlign: 'center' }}>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                {emailVerified ? 'Email verified!' : 'Phone verified!'} You can proceed now or verify the other contact method later.
+              </Alert>
+              <Button
+                variant="contained"
+                onClick={proceedWithSingleVerification}
+                sx={{ mr: 2 }}
+              >
+                Continue to Dashboard
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => {/* Continue verification */}}
+              >
+                Verify {emailVerified ? 'Phone' : 'Email'} Now
+              </Button>
             </Box>
           )}
 

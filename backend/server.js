@@ -419,9 +419,9 @@ app.post('/api/auth/complete-verification', async (req, res) => {
       return res.status(400).json({ error: 'Company not found' });
     }
 
-    // Check if both email and phone are verified
-    if (!company.emailVerified || !company.phoneVerified) {
-      return res.status(400).json({ error: 'Please verify both email and phone number' });
+    // Check if at least one contact method is verified
+    if (!company.emailVerified && !company.phoneVerified) {
+      return res.status(400).json({ error: 'Please verify at least one contact method' });
     }
 
     // Remove OTP record
@@ -486,6 +486,57 @@ app.post('/api/auth/resend-otp', async (req, res) => {
   }
 });
 
+// Verify remaining contact method (for logged-in users)
+app.post('/api/auth/verify-remaining', authenticateToken, async (req, res) => {
+  try {
+    const { type } = req.body; // 'email' or 'phone'
+    const companyId = req.company.id;
+
+    // Find company
+    const company = await DB.findCompany(useDatabase ? { _id: companyId } : { id: companyId });
+    if (!company) {
+      return res.status(400).json({ error: 'Company not found' });
+    }
+
+    // Check what needs verification
+    if (type === 'email' && company.emailVerified) {
+      return res.status(400).json({ error: 'Email already verified' });
+    }
+    if (type === 'phone' && company.phoneVerified) {
+      return res.status(400).json({ error: 'Phone already verified' });
+    }
+
+    // Create OTP record for remaining verification
+    const existingOtpIndex = otpStorage.findIndex(o => o.companyId === companyId);
+    if (existingOtpIndex !== -1) {
+      otpStorage.splice(existingOtpIndex, 1);
+    }
+
+    otpStorage.push({
+      companyId,
+      email: company.email,
+      phone: company.phone,
+      emailVerified: company.emailVerified,
+      phoneVerified: company.phoneVerified,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+    });
+
+    // Send OTP for remaining verification
+    if (type === 'email') {
+      await sendEmailOTP(company.email);
+    } else {
+      await sendSMSOTP(company.phone);
+    }
+
+    res.json({
+      message: `${type === 'email' ? 'Email' : 'Phone'} verification code sent successfully`
+    });
+  } catch (error) {
+    console.error('Verify remaining error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Login endpoint
 app.post('/api/auth/login', async (req, res) => {
   try {
@@ -503,10 +554,10 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
-    // Check if email and phone are verified
-    if (!company.emailVerified || !company.phoneVerified) {
+    // Check if at least one contact method is verified
+    if (!company.emailVerified && !company.phoneVerified) {
       return res.status(400).json({ 
-        error: 'Please verify your email and phone number before logging in',
+        error: 'Please verify your email or phone number before logging in',
         requiresVerification: true,
         companyId: company.id
       });
@@ -534,7 +585,8 @@ app.post('/api/auth/login', async (req, res) => {
         ...companyData,
         needsKyc,
         kycSubmitted,
-        accountActive
+        accountActive,
+        needsAdditionalVerification: !company.emailVerified || !company.phoneVerified
       }
     });
   } catch (error) {

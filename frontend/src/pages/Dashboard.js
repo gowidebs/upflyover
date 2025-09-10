@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import VerifyRemaining from '../components/VerifyRemaining';
 
 
 const Dashboard = () => {
@@ -136,10 +137,11 @@ const Dashboard = () => {
       </Box>
 
       {/* Setup Alerts */}
-      {!user?.emailVerified && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          Please verify your email address to access all features.
-        </Alert>
+      {user?.needsAdditionalVerification && (
+        <VerifyRemaining 
+          user={user} 
+          onVerificationComplete={() => window.location.reload()} 
+        />
       )}
       
       {calculateProfileCompletion() < 100 && (
