@@ -49,7 +49,13 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
-app.use(csrfProtection);
+// Skip CSRF for registration endpoints
+app.use((req, res, next) => {
+  if (req.path.includes('/api/auth/') || req.path.includes('/api/health')) {
+    return next();
+  }
+  return csrfProtection(req, res, next);
+});
 app.use('/uploads', express.static('uploads'));
 
 // Create uploads directory
