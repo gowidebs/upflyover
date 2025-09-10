@@ -571,7 +571,11 @@ app.put('/api/company/profile', authenticateToken, async (req, res) => {
     }
 
     // Update allowed fields
-    const allowedFields = ['name', 'contactPerson', 'phone', 'website', 'industry', 'country', 'companySize', 'description', 'address'];
+    const allowedFields = [
+      'name', 'contactPerson', 'phone', 'website', 'industry', 'country', 'companySize', 
+      'description', 'address', 'tagline', 'yearEstablished', 'teamSize', 'linkedIn',
+      'facebook', 'twitter', 'instagram', 'services', 'portfolio', 'certifications'
+    ];
     allowedFields.forEach(field => {
       if (updates[field] !== undefined) {
         company[field] = updates[field];

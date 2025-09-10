@@ -33,6 +33,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import AdminLogin from './pages/AdminLogin';
 import AdminKYC from './pages/AdminKYC';
 import KYCPending from './pages/KYCPending';
+import CompanyProfile from './pages/CompanyProfile';
 import { AuthProvider } from './contexts/AuthContext';
 import Footer from './components/Footer';
 
@@ -98,6 +99,7 @@ function App() {
               <Route path="/verify-otp" element={<VerifyOTP />} />
               <Route path="/kyc" element={<KYC />} />
               <Route path="/kyc-pending" element={<KYCPending />} />
+              <Route path="/profile" element={<CompanyProfile />} />
               <Route path="/admin" element={<AdminLogin />} />
               <Route path="/admin/kyc" element={<AdminKYC />} />
               <Route path="/dashboard" element={<Dashboard />} />
