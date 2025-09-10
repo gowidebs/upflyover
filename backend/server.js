@@ -715,6 +715,24 @@ app.post('/api/auth/reset-password', async (req, res) => {
   }
 });
 
+// Admin: Get platform statistics
+app.get('/api/admin/stats', (req, res) => {
+  const stats = {
+    totalRegistrations: companies.length,
+    verifiedCompanies: companies.filter(c => c.emailVerified && c.phoneVerified).length,
+    kycSubmissions: kycDocuments.length,
+    approvedKyc: kycDocuments.filter(k => k.status === 'approved').length,
+    pendingKyc: kycDocuments.filter(k => k.status === 'submitted').length,
+    activeAccounts: companies.filter(c => c.accountActive).length,
+    recentRegistrations: companies.filter(c => {
+      const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      return new Date(c.createdAt || c.updatedAt) > dayAgo;
+    }).length
+  };
+  
+  res.json(stats);
+});
+
 // Admin: Clear all data (for development)
 app.post('/api/admin/clear-all', (req, res) => {
   const { adminKey } = req.body;
