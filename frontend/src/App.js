@@ -101,11 +101,11 @@ function App() {
               <Route path="/signup" element={<SignupChoice />} />
               <Route path="/signup/individual" element={<IndividualSignup />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/verify-email" element={<IndividualEmailVerify />} />
+              <Route path="/verify-email" element={<VerifyEmail />} />
+              <Route path="/verify-individual-email" element={<IndividualEmailVerify />} />
               <Route path="/user-type-selection" element={<UserTypeSelection />} />
               <Route path="/individual-verification" element={<IndividualVerification />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/verify-otp" element={<VerifyOTP />} />
               <Route path="/kyc" element={<KYC />} />
               <Route path="/kyc-pending" element={<KYCPending />} />

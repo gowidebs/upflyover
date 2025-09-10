@@ -54,7 +54,7 @@ const IndividualSignup = () => {
 
       if (response.ok) {
         toast.success('Registration successful! Please verify your email.');
-        navigate('/verify-email', { state: { userId: data.userId, userType: 'individual' } });
+        navigate('/verify-individual-email', { state: { userId: data.userId, userType: 'individual' } });
       } else {
         setError(data.error || 'Registration failed');
       }
