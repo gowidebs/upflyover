@@ -112,16 +112,51 @@ const createModels = () => {
   };
 };
 
-// Auto-detect database availability
-if (process.env.MONGODB_URI && mongoose.connection.readyState === 1) {
-  const models = createModels();
-  Company = models.Company;
-  KYCModel = models.KYCModel;
-  useDatabase = true;
-  console.log('🗄️ Using MongoDB Atlas (Production)');
+// Enable MongoDB for persistent storage
+if (process.env.MONGODB_URI) {
+  mongoose.connection.on('connected', () => {
+    const models = createModels();
+    Company = models.Company;
+    KYCModel = models.KYCModel;
+    useDatabase = true;
+    console.log('🗄️ MongoDB connected - using persistent storage');
+    
+    // Migrate existing in-memory data
+    migrateExistingData();
+  });
+  
+  mongoose.connection.on('error', (err) => {
+    console.log('💾 MongoDB error, using in-memory storage:', err.message);
+    useDatabase = false;
+  });
 } else {
-  console.log('💾 Using in-memory storage (Free tier - auto-scales to MongoDB)');
+  console.log('💾 Using in-memory storage (Free tier)');
 }
+
+// Migrate existing in-memory data to MongoDB
+const migrateExistingData = async () => {
+  if (!useDatabase || companies.length === 0) return;
+  
+  try {
+    for (const company of companies) {
+      const exists = await Company.findOne({ email: company.email });
+      if (!exists) {
+        await new Company(company).save();
+        console.log('Migrated company:', company.email);
+      }
+    }
+    
+    for (const kyc of kycDocuments) {
+      const exists = await KYCModel.findOne({ companyId: kyc.companyId });
+      if (!exists) {
+        await new KYCModel(kyc).save();
+        console.log('Migrated KYC:', kyc.companyId);
+      }
+    }
+  } catch (error) {
+    console.log('Migration error:', error.message);
+  }
+};
 
 // In-memory storage (free tier)
 let companies = [];
@@ -158,29 +193,33 @@ const migrateToDatabase = async () => {
 // Database abstraction layer
 const DB = {
   async findCompany(query) {
-    if (useDatabase) {
+    if (useDatabase && Company) {
       return await Company.findOne(query);
     }
     return companies.find(c => Object.keys(query).every(key => c[key] === query[key]));
   },
   
   async saveCompany(companyData) {
-    if (useDatabase) {
+    if (useDatabase && Company) {
       const company = new Company(companyData);
-      return await company.save();
+      const saved = await company.save();
+      return saved;
     }
-    const company = { id: uuidv4(), ...companyData };
+    const company = { id: uuidv4(), ...companyData, createdAt: new Date() };
     companies.push(company);
     return company;
   },
   
   async updateCompany(id, updates) {
-    if (useDatabase) {
+    if (useDatabase && Company) {
       return await Company.findByIdAndUpdate(id, updates, { new: true });
     }
-    const company = companies.find(c => c.id === id || c._id === id);
-    if (company) Object.assign(company, updates);
-    return company;
+    const company = companies.find(c => c.id === id || c._id?.toString() === id);
+    if (company) {
+      Object.assign(company, updates);
+      return company;
+    }
+    return null;
   }
 };
 
@@ -217,7 +256,7 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     // Check if company already exists
-    const existingCompany = companies.find(c => c.email === email);
+    const existingCompany = await DB.findCompany({ email });
     if (existingCompany) {
       return res.status(400).json({ error: 'Company already exists with this email' });
     }
@@ -225,9 +264,8 @@ app.post('/api/auth/register', async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create company
-    const company = {
-      id: uuidv4(),
+    // Create company using database abstraction
+    const company = await DB.saveCompany({
       name,
       email,
       password: hashedPassword,
@@ -240,15 +278,13 @@ app.post('/api/auth/register', async (req, res) => {
       emailVerified: false,
       phoneVerified: false,
       kycStatus: 'pending',
-      accountActive: false,
-      createdAt: new Date()
-    };
-
-    companies.push(company);
+      accountActive: false
+    });
 
     // Store verification record
+    const companyId = company._id ? company._id.toString() : company.id;
     otpStorage.push({
-      companyId: company.id,
+      companyId,
       email: email,
       phone: phone,
       emailVerified: false,
@@ -272,7 +308,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     res.status(201).json({
       message: 'Registration successful! Please verify your email and phone number.',
-      companyId: company.id,
+      companyId: companyId,
       requiresVerification: true
     });
   } catch (error) {
