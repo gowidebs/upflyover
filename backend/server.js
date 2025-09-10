@@ -317,51 +317,35 @@ app.post('/api/auth/register', async (req, res) => {
       expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
     });
 
-    // Send OTPs via Twilio Verify (with fallback)
+    // Send OTPs via Twilio Verify (STRICT - No fallback for security)
     try {
       const emailResult = await sendEmailOTP(email);
       const smsResult = await sendSMSOTP(phone);
       
       console.log(`OTPs sent - Email: ${emailResult.success}, SMS: ${smsResult.success}`);
       
-      // If OTP sending fails, auto-verify for now
-      if (!emailResult.success && !smsResult.success) {
-        console.log('OTP sending failed, auto-verifying account');
-        company.emailVerified = true;
-        company.phoneVerified = true;
+      // SECURITY: If OTP sending fails, registration fails (no fake accounts)
+      if (!emailResult.success || !smsResult.success) {
+        console.error('OTP sending failed - registration blocked for security');
+        return res.status(500).json({ 
+          error: 'Verification service temporarily unavailable. Please try again later.',
+          code: 'VERIFICATION_SERVICE_ERROR'
+        });
       }
     } catch (error) {
-      console.error('Error sending OTPs, auto-verifying:', error);
-      company.emailVerified = true;
-      company.phoneVerified = true;
+      console.error('Critical: OTP service error - blocking registration:', error);
+      return res.status(500).json({ 
+        error: 'Account verification is required but currently unavailable. Please try again later.',
+        code: 'VERIFICATION_REQUIRED'
+      });
     }
 
-    // Check if verification is needed
-    const needsVerification = !company.emailVerified && !company.phoneVerified;
-    
-    if (needsVerification) {
-      res.status(201).json({
-        message: 'Registration successful! Please verify your email and phone number.',
-        companyId: companyId,
-        requiresVerification: true
-      });
-    } else {
-      // Auto-verified, generate token for immediate login
-      const token = jwt.sign(
-        { id: companyId, email: company.email },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-      
-      const { password: _, ...companyData } = company;
-      
-      res.status(201).json({
-        message: 'Registration successful! Welcome to Upflyover.',
-        token,
-        company: companyData,
-        requiresVerification: false
-      });
-    }
+    // SECURITY: Always require verification for B2B platform
+    res.status(201).json({
+      message: 'Registration successful! Please verify your email and phone number to ensure account security.',
+      companyId: companyId,
+      requiresVerification: true
+    });
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -457,12 +441,16 @@ app.post('/api/auth/complete-verification', async (req, res) => {
       return res.status(400).json({ error: 'Company not found' });
     }
 
-    // Check if at least one contact method is verified
-    if (!company.emailVerified && !company.phoneVerified) {
+    // SECURITY: Require BOTH email AND phone verification for B2B platform
+    if (!company.emailVerified || !company.phoneVerified) {
       return res.status(400).json({ 
-        error: 'Please verify your email or phone number before logging in',
+        error: 'Please verify both your email and phone number before accessing the platform',
         requiresVerification: true,
-        companyId: company.id
+        companyId: company.id,
+        verificationStatus: {
+          emailVerified: company.emailVerified,
+          phoneVerified: company.phoneVerified
+        }
       });
     }
 
