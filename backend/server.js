@@ -354,13 +354,10 @@ app.post('/api/auth/login', async (req, res) => {
       });
     }
 
-    // Check if account is active (KYC approved)
-    if (company.accountActive === false) {
-      return res.status(403).json({ 
-        error: 'Your account is pending KYC approval. Please complete KYC verification or wait for admin approval.',
-        requiresKyc: true
-      });
-    }
+    // Allow login but indicate KYC status
+    const needsKyc = company.kycStatus === 'pending' || company.kycStatus === 'rejected';
+    const kycSubmitted = company.kycStatus === 'submitted';
+    const accountActive = company.accountActive === true;
 
     // Generate JWT token
     const token = jwt.sign(
@@ -375,7 +372,12 @@ app.post('/api/auth/login', async (req, res) => {
     res.json({
       message: 'Login successful',
       token,
-      company: companyData
+      company: {
+        ...companyData,
+        needsKyc,
+        kycSubmitted,
+        accountActive
+      }
     });
   } catch (error) {
     console.error('Login error:', error);

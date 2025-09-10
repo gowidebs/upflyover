@@ -27,6 +27,7 @@ const Dashboard = () => {
       navigate('/login');
       return;
     }
+    // Allow access to dashboard for KYC submission
     fetchKycStatus();
   }, [isAuthenticated, navigate]);
 
