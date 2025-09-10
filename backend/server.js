@@ -7,7 +7,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
-const { sendSMSOTP, sendEmailOTP, verifyOTP } = require('./utils/smsService');
+// const { sendSMSOTP, sendEmailOTP, verifyOTP } = require('./utils/smsService');
 
 // Load environment variables
 require('dotenv').config();
@@ -305,49 +305,26 @@ app.post('/api/auth/register', async (req, res) => {
       expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
     });
 
-    // Send OTPs via Twilio Verify (with fallback)
-    try {
-      if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
-        const emailResult = await sendEmailOTP(email);
-        const smsResult = await sendSMSOTP(phone);
-        console.log(`OTPs sent - Email: ${emailResult.success}, SMS: ${smsResult.success}`);
-      } else {
-        console.log('Twilio not configured, auto-verifying for development');
-        company.emailVerified = true;
-        company.phoneVerified = true;
-      }
-    } catch (error) {
-      console.error('Error sending OTPs, auto-verifying:', error);
-      company.emailVerified = true;
-      company.phoneVerified = true;
-    }
+    // Auto-verify for immediate access (no external dependencies)
+    company.emailVerified = true;
+    company.phoneVerified = true;
+    console.log(`Auto-verified account for: ${email}`);
 
-    // Check if verification is needed
-    const needsVerification = !company.emailVerified || !company.phoneVerified;
+    // Generate token for immediate login
+    const token = jwt.sign(
+      { id: companyId, email: company.email },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
     
-    if (needsVerification) {
-      res.status(201).json({
-        message: 'Registration successful! Please verify your email and phone number.',
-        companyId: companyId,
-        requiresVerification: true
-      });
-    } else {
-      // Auto-verified, generate token for immediate login
-      const token = jwt.sign(
-        { id: companyId, email: company.email },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-      
-      const { password: _, ...companyData } = company;
-      
-      res.status(201).json({
-        message: 'Registration successful! Welcome to Upflyover.',
-        token,
-        company: companyData,
-        requiresVerification: false
-      });
-    }
+    const { password: _, ...companyData } = company;
+    
+    res.status(201).json({
+      message: 'Registration successful! Welcome to Upflyover.',
+      token,
+      company: companyData,
+      requiresVerification: false
+    });
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -443,14 +420,7 @@ app.post('/api/auth/complete-verification', async (req, res) => {
       return res.status(400).json({ error: 'Company not found' });
     }
 
-    // Check if at least one contact method is verified
-    if (!company.emailVerified && !company.phoneVerified) {
-      return res.status(400).json({ 
-        error: 'Please verify your email or phone number before logging in',
-        requiresVerification: true,
-        companyId: company.id
-      });
-    }
+    // Allow immediate login (auto-verified accounts)
 
     // Remove OTP record
     const otpIndex = otpStorage.findIndex(o => o.companyId === companyId);
