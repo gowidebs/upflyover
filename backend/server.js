@@ -211,8 +211,13 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, email, password, industry, companySize, country, contactPerson, phone, website } = req.body;
 
+    // Validate required fields
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Name, email, and password are required' });
+    }
+
     // Check if company already exists
-    const existingCompany = await DB.findCompany({ email });
+    const existingCompany = companies.find(c => c.email === email);
     if (existingCompany) {
       return res.status(400).json({ error: 'Company already exists with this email' });
     }
@@ -220,22 +225,26 @@ app.post('/api/auth/register', async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create company using abstraction layer
-    const company = await DB.saveCompany({
+    // Create company
+    const company = {
+      id: uuidv4(),
       name,
       email,
       password: hashedPassword,
-      industry,
-      companySize,
-      country,
+      industry: industry || '',
+      companySize: companySize || '',
+      country: country || '',
       contactPerson: contactPerson || '',
       phone: phone || '',
       website: website || '',
       emailVerified: false,
       phoneVerified: false,
       kycStatus: 'pending',
-      accountActive: false
-    });
+      accountActive: false,
+      createdAt: new Date()
+    };
+
+    companies.push(company);
 
     // Store verification record
     otpStorage.push({
