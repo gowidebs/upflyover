@@ -8,6 +8,8 @@ const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
 const { sendSMSOTP, sendEmailOTP, verifyOTP } = require('./utils/smsService');
+const Company = require('./models/Company');
+const KYC = require('./models/KYC');
 
 // Load environment variables
 require('dotenv').config();
@@ -72,10 +74,7 @@ const upload = multer({
   }
 });
 
-// In-memory storage (replace with database in production)
-const companies = [];
-const verificationTokens = [];
-const kycDocuments = [];
+// Temporary OTP storage (in-memory is fine for OTPs)
 const otpStorage = []; // Store OTPs temporarily
 
 // Auth middleware
@@ -106,7 +105,7 @@ app.post('/api/auth/register', async (req, res) => {
     const { name, email, password, industry, companySize, country, contactPerson, phone, website } = req.body;
 
     // Check if company already exists
-    const existingCompany = companies.find(c => c.email === email);
+    const existingCompany = await Company.findOne({ email });
     if (existingCompany) {
       return res.status(400).json({ error: 'Company already exists with this email' });
     }
@@ -115,8 +114,7 @@ app.post('/api/auth/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create company (not verified yet)
-    const company = {
-      id: uuidv4(),
+    const company = new Company({
       name,
       email,
       password: hashedPassword,
@@ -125,22 +123,14 @@ app.post('/api/auth/register', async (req, res) => {
       country,
       contactPerson: contactPerson || '',
       phone: phone || '',
-      website: website || '',
-      createdAt: new Date(),
-      emailVerified: false,
-      phoneVerified: false,
-      kycStatus: 'pending',
-      kycSubmittedAt: null,
-      profileComplete: false,
-      twoFactorEnabled: false,
-      accountActive: false
-    };
+      website: website || ''
+    });
 
-    companies.push(company);
+    await company.save();
 
     // Store verification record
     otpStorage.push({
-      companyId: company.id,
+      companyId: company._id.toString(),
       email: email,
       phone: phone,
       emailVerified: false,
@@ -164,7 +154,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     res.status(201).json({
       message: 'Registration successful! Please verify your email and phone number.',
-      companyId: company.id,
+      companyId: company._id.toString(),
       requiresVerification: true
     });
   } catch (error) {
