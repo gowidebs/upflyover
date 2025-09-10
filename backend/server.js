@@ -127,7 +127,8 @@ app.post('/api/auth/register', async (req, res) => {
       kycStatus: 'pending',
       kycSubmittedAt: null,
       profileComplete: false,
-      twoFactorEnabled: false
+      twoFactorEnabled: false,
+      accountActive: false
     };
 
     companies.push(company);
@@ -353,6 +354,14 @@ app.post('/api/auth/login', async (req, res) => {
       });
     }
 
+    // Check if account is active (KYC approved)
+    if (company.accountActive === false) {
+      return res.status(403).json({ 
+        error: 'Your account is pending KYC approval. Please complete KYC verification or wait for admin approval.',
+        requiresKyc: true
+      });
+    }
+
     // Generate JWT token
     const token = jwt.sign(
       { id: company.id, email: company.email },
@@ -425,6 +434,7 @@ app.post('/api/kyc/submit', authenticateToken, upload.fields([
     // Update company KYC status
     company.kycStatus = 'submitted';
     company.kycSubmittedAt = new Date();
+    company.accountActive = false; // Account inactive until approved
 
     res.json({
       message: 'KYC documents submitted successfully',
@@ -485,6 +495,75 @@ app.get('/api/kyc/status', authenticateToken, (req, res) => {
     });
   } catch (error) {
     console.error('KYC status error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Admin: Get all KYC submissions
+app.get('/api/admin/kyc/submissions', (req, res) => {
+  try {
+    const submissions = kycDocuments.map(kyc => {
+      const company = companies.find(c => c.id === kyc.companyId);
+      return {
+        ...kyc,
+        companyName: company?.name || 'Unknown',
+        companyEmail: company?.email || 'Unknown'
+      };
+    });
+    res.json(submissions);
+  } catch (error) {
+    console.error('Admin KYC fetch error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Admin: Review KYC submission
+app.post('/api/admin/kyc/review', (req, res) => {
+  try {
+    const { kycId, action, notes } = req.body;
+    
+    const kycRecord = kycDocuments.find(kyc => kyc.id === kycId);
+    if (!kycRecord) {
+      return res.status(404).json({ error: 'KYC record not found' });
+    }
+
+    const company = companies.find(c => c.id === kycRecord.companyId);
+    if (!company) {
+      return res.status(404).json({ error: 'Company not found' });
+    }
+
+    // Update KYC status
+    kycRecord.status = action === 'approve' ? 'approved' : 'rejected';
+    kycRecord.reviewedAt = new Date();
+    kycRecord.reviewNotes = notes;
+
+    // Update company status
+    company.kycStatus = kycRecord.status;
+    company.accountActive = action === 'approve';
+
+    res.json({
+      message: `KYC ${action === 'approve' ? 'approved' : 'rejected'} successfully`,
+      status: kycRecord.status
+    });
+  } catch (error) {
+    console.error('KYC review error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Admin: Serve KYC documents
+app.get('/api/admin/kyc/document/:filename', (req, res) => {
+  try {
+    const filename = req.params.filename;
+    const filePath = path.join(__dirname, 'uploads', filename);
+    
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      res.status(404).json({ error: 'File not found' });
+    }
+  } catch (error) {
+    console.error('Document serve error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

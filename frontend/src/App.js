@@ -30,6 +30,8 @@ import VerifyEmail from './pages/VerifyEmail';
 import VerifyOTP from './pages/VerifyOTP';
 import KYC from './pages/KYC';
 import ForgotPassword from './pages/ForgotPassword';
+import AdminLogin from './pages/AdminLogin';
+import AdminKYC from './pages/AdminKYC';
 import { AuthProvider } from './contexts/AuthContext';
 import Footer from './components/Footer';
 
@@ -94,6 +96,8 @@ function App() {
               <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/verify-otp" element={<VerifyOTP />} />
               <Route path="/kyc" element={<KYC />} />
+              <Route path="/admin" element={<AdminLogin />} />
+              <Route path="/admin/kyc" element={<AdminKYC />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/requirements" element={<Requirements />} />
               <Route path="/companies" element={<Companies />} />
