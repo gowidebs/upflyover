@@ -397,55 +397,73 @@ app.get('/api/auth/profile', authenticateToken, (req, res) => {
 });
 
 // KYC document submission
-app.post('/api/kyc/submit', authenticateToken, upload.fields([
-  { name: 'businessLicense', maxCount: 1 },
-  { name: 'taxCertificate', maxCount: 1 },
-  { name: 'bankStatement', maxCount: 1 },
-  { name: 'ownershipProof', maxCount: 1 }
-]), (req, res) => {
-  try {
-    const { businessRegistrationNumber, taxId, bankAccountNumber, description } = req.body;
-    const companyId = req.company.id;
+app.post('/api/kyc/submit', authenticateToken, (req, res) => {
+  const uploadHandler = upload.fields([
+    { name: 'businessLicense', maxCount: 1 },
+    { name: 'taxCertificate', maxCount: 1 },
+    { name: 'bankStatement', maxCount: 1 },
+    { name: 'ownershipProof', maxCount: 1 }
+  ]);
 
-    // Find company
-    const company = companies.find(c => c.id === companyId);
-    if (!company) {
-      return res.status(404).json({ error: 'Company not found' });
+  uploadHandler(req, res, (err) => {
+    if (err) {
+      console.error('File upload error:', err);
+      return res.status(400).json({ error: err.message || 'File upload failed' });
     }
 
-    // Create KYC record
-    const kycRecord = {
-      id: uuidv4(),
-      companyId,
-      businessRegistrationNumber,
-      taxId,
-      bankAccountNumber,
-      description,
-      documents: {
-        businessLicense: req.files.businessLicense?.[0]?.filename,
-        taxCertificate: req.files.taxCertificate?.[0]?.filename,
-        bankStatement: req.files.bankStatement?.[0]?.filename,
-        ownershipProof: req.files.ownershipProof?.[0]?.filename
-      },
-      submittedAt: new Date(),
-      status: 'submitted'
-    };
+    try {
+      const { businessRegistrationNumber, taxId, bankAccountNumber, description } = req.body;
+      const companyId = req.company.id;
 
-    kycDocuments.push(kycRecord);
+      console.log('KYC submission data:', { companyId, businessRegistrationNumber, taxId, files: req.files });
 
-    // Update company KYC status
-    company.kycStatus = 'submitted';
-    company.kycSubmittedAt = new Date();
-    company.accountActive = false; // Account inactive until approved
+      // Find company
+      const company = companies.find(c => c.id === companyId);
+      if (!company) {
+        return res.status(404).json({ error: 'Company not found' });
+      }
 
-    res.json({
-      message: 'KYC documents submitted successfully',
-      kycId: kycRecord.id
-    });
-  } catch (error) {
-    console.error('KYC submission error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
+      // Validate required fields
+      if (!businessRegistrationNumber || !taxId) {
+        return res.status(400).json({ error: 'Business registration number and tax ID are required' });
+      }
+
+      // Create KYC record
+      const kycRecord = {
+        id: uuidv4(),
+        companyId,
+        businessRegistrationNumber,
+        taxId,
+        bankAccountNumber: bankAccountNumber || '',
+        description: description || '',
+        documents: {
+          businessLicense: req.files?.businessLicense?.[0]?.filename || null,
+          taxCertificate: req.files?.taxCertificate?.[0]?.filename || null,
+          bankStatement: req.files?.bankStatement?.[0]?.filename || null,
+          ownershipProof: req.files?.ownershipProof?.[0]?.filename || null
+        },
+        submittedAt: new Date(),
+        status: 'submitted'
+      };
+
+      kycDocuments.push(kycRecord);
+
+      // Update company KYC status
+      company.kycStatus = 'submitted';
+      company.kycSubmittedAt = new Date();
+      company.accountActive = false; // Account inactive until approved
+
+      console.log('KYC record created:', kycRecord.id);
+
+      res.json({
+        message: 'KYC documents submitted successfully',
+        kycId: kycRecord.id
+      });
+    } catch (error) {
+      console.error('KYC submission error:', error);
+      res.status(500).json({ error: 'Internal server error: ' + error.message });
+    }
+  });
 });
 
 // Update company profile
