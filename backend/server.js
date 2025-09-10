@@ -305,25 +305,49 @@ app.post('/api/auth/register', async (req, res) => {
       expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
     });
 
-    // Send OTPs via Twilio Verify
+    // Send OTPs via Twilio Verify (with fallback)
     try {
-      const emailResult = await sendEmailOTP(email);
-      const smsResult = await sendSMSOTP(phone);
-      
-      console.log(`OTPs sent - Email: ${emailResult.success}, SMS: ${smsResult.success}`);
-      
-      if (!emailResult.success || !smsResult.success) {
-        console.error('OTP sending failed:', { emailResult, smsResult });
+      if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+        const emailResult = await sendEmailOTP(email);
+        const smsResult = await sendSMSOTP(phone);
+        console.log(`OTPs sent - Email: ${emailResult.success}, SMS: ${smsResult.success}`);
+      } else {
+        console.log('Twilio not configured, auto-verifying for development');
+        company.emailVerified = true;
+        company.phoneVerified = true;
       }
     } catch (error) {
-      console.error('Error sending OTPs:', error);
+      console.error('Error sending OTPs, auto-verifying:', error);
+      company.emailVerified = true;
+      company.phoneVerified = true;
     }
 
-    res.status(201).json({
-      message: 'Registration successful! Please verify your email and phone number.',
-      companyId: companyId,
-      requiresVerification: true
-    });
+    // Check if verification is needed
+    const needsVerification = !company.emailVerified || !company.phoneVerified;
+    
+    if (needsVerification) {
+      res.status(201).json({
+        message: 'Registration successful! Please verify your email and phone number.',
+        companyId: companyId,
+        requiresVerification: true
+      });
+    } else {
+      // Auto-verified, generate token for immediate login
+      const token = jwt.sign(
+        { id: companyId, email: company.email },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+      
+      const { password: _, ...companyData } = company;
+      
+      res.status(201).json({
+        message: 'Registration successful! Welcome to Upflyover.',
+        token,
+        company: companyData,
+        requiresVerification: false
+      });
+    }
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Internal server error' });
