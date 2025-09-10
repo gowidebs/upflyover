@@ -21,6 +21,9 @@ try {
   verifyOTP = async () => ({ success: false });
 }
 
+// CSRF Protection
+const { csrfProtection } = require('./middleware/csrf');
+
 // Load environment variables
 require('dotenv').config();
 
@@ -38,7 +41,7 @@ if (process.env.MONGODB_URI) {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || 'upflyover-jwt-secret-key-2024';
 
 // Middleware
 app.use(cors({
@@ -46,6 +49,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+app.use(csrfProtection);
 app.use('/uploads', express.static('uploads'));
 
 // Create uploads directory
@@ -884,7 +888,8 @@ app.get('/api/requirements/:id/download/:filename', authenticateToken, (req, res
 // Admin: Clear all data (for development)
 app.post('/api/admin/clear-all', (req, res) => {
   const { adminKey } = req.body;
-  if (adminKey !== 'upflyover2025') {
+  const ADMIN_KEY = process.env.ADMIN_KEY || 'temp-admin-key-change-in-production';
+  if (adminKey !== ADMIN_KEY) {
     return res.status(403).json({ error: 'Invalid admin key' });
   }
   

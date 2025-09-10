@@ -36,7 +36,7 @@ router.post('/register', validateRegistration, async (req, res) => {
     // Generate JWT token
     const token = jwt.sign(
       { companyId: company._id },
-      process.env.JWT_SECRET || 'upflyover-secret-key',
+      process.env.JWT_SECRET || 'upflyover-jwt-secret-key-2024',
       { expiresIn: '7d' }
     );
     
@@ -80,7 +80,7 @@ router.post('/login', validateLogin, async (req, res) => {
     // Generate JWT token
     const token = jwt.sign(
       { companyId: company._id },
-      process.env.JWT_SECRET || 'upflyover-secret-key',
+      process.env.JWT_SECRET || 'upflyover-jwt-secret-key-2024',
       { expiresIn: '7d' }
     );
     
