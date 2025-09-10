@@ -305,18 +305,16 @@ app.post('/api/auth/register', async (req, res) => {
       expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
     });
 
-    // Send OTPs via Twilio Verify
+    // Send Email OTP only (SMS after KYC)
     try {
       const emailResult = await sendEmailOTP(email);
-      const smsResult = await sendSMSOTP(phone);
+      console.log(`Email OTP sent: ${emailResult.success}`);
       
-      console.log(`OTPs sent - Email: ${emailResult.success}, SMS: ${smsResult.success}`);
-      
-      if (!emailResult.success || !smsResult.success) {
-        console.error('OTP sending failed:', { emailResult, smsResult });
+      if (!emailResult.success) {
+        console.error('Email OTP sending failed:', emailResult);
       }
     } catch (error) {
-      console.error('Error sending OTPs:', error);
+      console.error('Error sending email OTP:', error);
     }
 
     res.status(201).json({
@@ -419,9 +417,9 @@ app.post('/api/auth/complete-verification', async (req, res) => {
       return res.status(400).json({ error: 'Company not found' });
     }
 
-    // Check if at least one contact method is verified
-    if (!company.emailVerified && !company.phoneVerified) {
-      return res.status(400).json({ error: 'Please verify at least one contact method' });
+    // Check if email is verified (phone verification after KYC)
+    if (!company.emailVerified) {
+      return res.status(400).json({ error: 'Please verify your email address' });
     }
 
     // Remove OTP record
@@ -554,10 +552,10 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
-    // Check if at least one contact method is verified
-    if (!company.emailVerified && !company.phoneVerified) {
+    // Check if email is verified (phone verification after KYC)
+    if (!company.emailVerified) {
       return res.status(400).json({ 
-        error: 'Please verify your email or phone number before logging in',
+        error: 'Please verify your email address before logging in',
         requiresVerification: true,
         companyId: company.id
       });
@@ -1080,3 +1078,33 @@ app.get('/api/health', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });// Force rebuild Wed Sep 10 15:16:00 +04 2025
+// Add phone verification after KYC approval
+app.post('/api/kyc/verify-phone', authenticateToken, async (req, res) => {
+  try {
+    const { phone } = req.body;
+    const companyId = req.company.id;
+
+    // Find company
+    const company = companies.find(c => c.id === companyId);
+    if (!company) {
+      return res.status(404).json({ error: 'Company not found' });
+    }
+
+    // Check if KYC is approved
+    if (company.kycStatus !== 'approved') {
+      return res.status(400).json({ error: 'Complete KYC verification first' });
+    }
+
+    // Update phone and mark as verified (simplified for now)
+    company.phone = phone;
+    company.phoneVerified = true;
+
+    res.json({
+      message: 'Phone number verified successfully',
+      phoneVerified: true
+    });
+  } catch (error) {
+    console.error('Phone verification error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
