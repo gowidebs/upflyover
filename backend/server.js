@@ -58,16 +58,27 @@ const storage = multer.diskStorage({
 
 const upload = multer({ 
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|pdf|doc|docx/;
+    const allowedTypes = /jpeg|jpg|png|pdf|doc|docx|zip|rar|txt|xls|xlsx|ppt|pptx/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
     
-    if (mimetype && extname) {
+    // Allow common business file types
+    const allowedMimeTypes = [
+      'image/jpeg', 'image/jpg', 'image/png',
+      'application/pdf',
+      'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/zip', 'application/x-zip-compressed',
+      'application/x-rar-compressed',
+      'text/plain',
+      'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    ];
+    
+    if (extname || allowedMimeTypes.includes(file.mimetype)) {
       return cb(null, true);
     } else {
-      cb(new Error('Invalid file type'));
+      cb(new Error('Invalid file type. Allowed: PDF, DOC, DOCX, ZIP, RAR, JPG, PNG, TXT, XLS, PPT'));
     }
   }
 });
@@ -763,6 +774,37 @@ app.get('/api/admin/stats', (req, res) => {
   res.json(stats);
 });
 
+// Download requirement attachment
+app.get('/api/requirements/:id/download/:filename', authenticateToken, (req, res) => {
+  try {
+    const { id, filename } = req.params;
+    
+    // Find requirement
+    const requirement = requirements.find(req => req.id === id);
+    if (!requirement) {
+      return res.status(404).json({ error: 'Requirement not found' });
+    }
+    
+    // Check if file exists in requirement attachments
+    const attachment = requirement.attachments?.find(att => att.filename === filename);
+    if (!attachment) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    const filePath = path.join(__dirname, 'uploads', filename);
+    
+    if (fs.existsSync(filePath)) {
+      res.setHeader('Content-Disposition', `attachment; filename="${attachment.originalName}"`);
+      res.sendFile(filePath);
+    } else {
+      res.status(404).json({ error: 'File not found on server' });
+    }
+  } catch (error) {
+    console.error('Download error:', error);
+    res.status(500).json({ error: 'Download failed' });
+  }
+});
+
 // Admin: Clear all data (for development)
 app.post('/api/admin/clear-all', (req, res) => {
   const { adminKey } = req.body;
@@ -772,6 +814,8 @@ app.post('/api/admin/clear-all', (req, res) => {
   
   companies.length = 0;
   kycDocuments.length = 0;
+  requirements.length = 0;
+  applications.length = 0;
   otpStorage.length = 0;
   
   res.json({ message: 'All data cleared successfully' });
@@ -779,14 +823,43 @@ app.post('/api/admin/clear-all', (req, res) => {
 
 // Requirements endpoints
 
-// Get all requirements
+// Get all requirements with smart matching
 app.get('/api/requirements', authenticateToken, async (req, res) => {
   try {
-    const allRequirements = requirements.map(req => ({
-      ...req,
-      companyName: companies.find(c => c.id === req.companyId)?.name || 'Anonymous'
-    }));
-    res.json({ requirements: allRequirements });
+    const currentCompany = companies.find(c => c.id === req.company.id);
+    const currentCompanyServices = currentCompany?.services || [];
+    
+    const allRequirements = requirements.map(req => {
+      const posterCompany = companies.find(c => c.id === req.companyId);
+      
+      // Calculate match score based on company services vs requirement category
+      let matchScore = 0;
+      if (currentCompanyServices.length > 0) {
+        const hasMatchingService = currentCompanyServices.some(service => 
+          service.category?.toLowerCase() === req.category?.toLowerCase() ||
+          service.title?.toLowerCase().includes(req.category?.toLowerCase()) ||
+          req.category?.toLowerCase().includes(service.category?.toLowerCase())
+        );
+        matchScore = hasMatchingService ? 90 : 20;
+      }
+      
+      return {
+        ...req,
+        companyName: posterCompany?.name || 'Anonymous',
+        matchScore,
+        isRecommended: matchScore >= 70
+      };
+    });
+    
+    // Sort by match score (recommended first), then by date
+    const sortedRequirements = allRequirements.sort((a, b) => {
+      if (a.matchScore !== b.matchScore) {
+        return b.matchScore - a.matchScore;
+      }
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+    
+    res.json({ requirements: sortedRequirements });
   } catch (error) {
     res.status(500).json({ error: 'Failed to load requirements' });
   }
@@ -810,38 +883,57 @@ app.get('/api/requirements/my', authenticateToken, async (req, res) => {
   }
 });
 
-// Post new requirement
-app.post('/api/requirements', authenticateToken, async (req, res) => {
-  try {
-    const { title, description, category, budget, timeline, location, requirements: reqText } = req.body;
-    const companyId = req.company.id;
-    
-    if (!title || !description || !category) {
-      return res.status(400).json({ error: 'Title, description, and category are required' });
+// Post new requirement with file uploads
+app.post('/api/requirements', authenticateToken, (req, res) => {
+  const uploadHandler = upload.array('attachments', 5); // Allow up to 5 files
+  
+  uploadHandler(req, res, async (err) => {
+    if (err) {
+      console.error('File upload error:', err);
+      return res.status(400).json({ error: 'File upload failed: ' + err.message });
     }
     
-    const requirement = {
-      id: uuidv4(),
-      companyId,
-      title,
-      description,
-      category,
-      budget: budget || '',
-      timeline: timeline || '',
-      location: location || '',
-      requirements: reqText || '',
-      status: 'open',
-      createdAt: new Date(),
-      applications: 0
-    };
-    
-    requirements.push(requirement);
-    
-    res.json({ success: true, requirement });
-  } catch (error) {
-    console.error('Error posting requirement:', error);
-    res.status(500).json({ error: 'Failed to post requirement' });
-  }
+    try {
+      const { title, description, category, budget, timeline, location, requirements: reqText } = req.body;
+      const companyId = req.company.id;
+      
+      if (!title || !description || !category) {
+        return res.status(400).json({ error: 'Title, description, and category are required' });
+      }
+      
+      // Process uploaded files
+      const attachments = req.files ? req.files.map(file => ({
+        filename: file.filename,
+        originalName: file.originalname,
+        size: file.size,
+        mimetype: file.mimetype,
+        uploadedAt: new Date()
+      })) : [];
+      
+      const requirement = {
+        id: uuidv4(),
+        companyId,
+        title,
+        description,
+        category,
+        budget: budget || '',
+        timeline: timeline || '',
+        location: location || '',
+        requirements: reqText || '',
+        attachments,
+        status: 'open',
+        createdAt: new Date(),
+        applications: 0
+      };
+      
+      requirements.push(requirement);
+      
+      res.json({ success: true, requirement });
+    } catch (error) {
+      console.error('Error posting requirement:', error);
+      res.status(500).json({ error: 'Failed to post requirement' });
+    }
+  });
 });
 
 // Apply to requirement
