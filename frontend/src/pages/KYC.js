@@ -275,7 +275,7 @@ const KYC = () => {
                 Review Your Information
               </Typography>
               <Alert severity="warning" sx={{ mb: 3 }}>
-                Please review all information carefully before submitting. Changes cannot be made after submission.
+                Please review all information carefully before submitting. After verification, your account will be activated within 1-2 business days. Changes cannot be made after submission.
               </Alert>
             </Grid>
             
