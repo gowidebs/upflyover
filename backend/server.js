@@ -186,12 +186,13 @@ app.post('/api/auth/verify-email-otp', async (req, res) => {
     }
 
     // Find and update company
-    const company = companies.find(c => c.id === companyId);
+    const company = await Company.findById(companyId);
     if (!company) {
       return res.status(400).json({ error: 'Company not found' });
     }
 
     company.emailVerified = true;
+    await company.save();
 
     res.json({
       message: 'Email verified successfully',
@@ -227,12 +228,13 @@ app.post('/api/auth/verify-phone-otp', async (req, res) => {
     }
 
     // Find and update company
-    const company = companies.find(c => c.id === companyId);
+    const company = await Company.findById(companyId);
     if (!company) {
       return res.status(400).json({ error: 'Company not found' });
     }
 
     company.phoneVerified = true;
+    await company.save();
 
     res.json({
       message: 'Phone verified successfully',
@@ -329,7 +331,7 @@ app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
 
     // Find company
-    const company = companies.find(c => c.email === email);
+    const company = await Company.findOne({ email });
     if (!company) {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
@@ -356,7 +358,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: company.id, email: company.email },
+      { id: company._id, email: company.email },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -381,14 +383,18 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // Get profile endpoint
-app.get('/api/auth/profile', authenticateToken, (req, res) => {
-  const company = companies.find(c => c.id === req.company.id);
-  if (!company) {
-    return res.status(404).json({ error: 'Company not found' });
-  }
+app.get('/api/auth/profile', authenticateToken, async (req, res) => {
+  try {
+    const company = await Company.findById(req.company.id);
+    if (!company) {
+      return res.status(404).json({ error: 'Company not found' });
+    }
 
-  const { password: _, ...companyData } = company;
-  res.json({ company: companyData });
+    const { password: _, ...companyData } = company.toObject();
+    res.json({ company: companyData });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // KYC document submission
