@@ -351,28 +351,28 @@ app.post('/api/auth/individual/register', async (req, res) => {
 
     individuals.push(individual);
 
-    // Send email OTP for verification (with fallback)
+    // Send email OTP for verification
     try {
       const emailResult = await sendEmailOTP(email);
       
       if (!emailResult.success) {
-        console.log('Twilio not available, using fallback verification');
-        // Fallback: Auto-verify email for development
-        individual.emailVerified = true;
+        return res.status(500).json({ 
+          error: 'Email verification service temporarily unavailable. Please try again later.',
+          code: 'VERIFICATION_SERVICE_ERROR'
+        });
       }
     } catch (error) {
-      console.error('Email OTP service error, using fallback:', error);
-      // Fallback: Auto-verify email for development
-      individual.emailVerified = true;
+      console.error('Email OTP service error:', error);
+      return res.status(500).json({ 
+        error: 'Account verification is required but currently unavailable. Please try again later.',
+        code: 'VERIFICATION_REQUIRED'
+      });
     }
 
     res.status(201).json({
-      message: individual.emailVerified ? 
-        'Registration successful! You can now select your account type.' : 
-        'Registration successful! Please verify your email address.',
+      message: 'Registration successful! Please verify your email address.',
       userId: individual.id,
-      requiresVerification: !individual.emailVerified,
-      emailVerified: individual.emailVerified
+      requiresVerification: true
     });
   } catch (error) {
     console.error('Individual registration error:', error);

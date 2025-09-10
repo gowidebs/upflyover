@@ -53,13 +53,8 @@ const IndividualSignup = () => {
       const data = await response.json();
 
       if (response.ok) {
-        if (data.emailVerified) {
-          toast.success('Registration successful!');
-          navigate('/user-type-selection', { state: { userId: data.userId, email: formData.email } });
-        } else {
-          toast.success('Registration successful! Please verify your email.');
-          navigate('/verify-individual-email', { state: { userId: data.userId, userType: 'individual' } });
-        }
+        toast.success('Registration successful! Please verify your email.');
+        navigate('/verify-individual-email', { state: { userId: data.userId, userType: 'individual' } });
       } else {
         setError(data.error || 'Registration failed');
       }
