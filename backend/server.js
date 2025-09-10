@@ -503,12 +503,9 @@ app.post('/api/kyc/submit', authenticateToken, (req, res) => {
     { name: 'taxCertificate', maxCount: 1 }
   ]);
 
-  uploadHandler(req, res, (err) => {
+  uploadHandler(req, res, async (err) => {
     if (err) {
       console.error('File upload error:', err);
-      if (err.code === 'ENOENT') {
-        return res.status(500).json({ error: 'Upload directory not accessible' });
-      }
       return res.status(400).json({ error: err.message || 'File upload failed' });
     }
 
@@ -516,23 +513,23 @@ app.post('/api/kyc/submit', authenticateToken, (req, res) => {
       const { businessRegistrationNumber, taxId, description } = req.body;
       const companyId = req.company.id;
 
-      console.log('KYC submission data:', { companyId, businessRegistrationNumber, taxId, files: req.files });
-
-      // Find company
-      const company = await DB.findCompany(useDatabase ? { _id: companyId } : { id: companyId });
-      if (!company) {
-        return res.status(404).json({ error: 'Company not found' });
-      }
+      console.log('KYC submission:', { companyId, businessRegistrationNumber, taxId });
 
       // Validate required fields
       if (!businessRegistrationNumber || !taxId) {
         return res.status(400).json({ error: 'Business registration number and tax ID are required' });
       }
 
-      // Check if at least one document is uploaded
-      const hasDocuments = req.files && Object.keys(req.files).length > 0;
-      if (!hasDocuments) {
-        return res.status(400).json({ error: 'At least one document must be uploaded' });
+      // Find company using fallback method
+      let company;
+      if (useDatabase) {
+        company = await Company.findById(companyId);
+      } else {
+        company = companies.find(c => c.id === companyId);
+      }
+      
+      if (!company) {
+        return res.status(404).json({ error: 'Company not found' });
       }
 
       // Create KYC record
@@ -553,21 +550,25 @@ app.post('/api/kyc/submit', authenticateToken, (req, res) => {
       kycDocuments.push(kycRecord);
 
       // Update company KYC status
-      await DB.updateCompany(companyId, {
-        kycStatus: 'submitted',
-        kycSubmittedAt: new Date(),
-        accountActive: false
-      });
-
-      console.log('KYC record created:', kycRecord.id);
+      if (useDatabase) {
+        await Company.findByIdAndUpdate(companyId, {
+          kycStatus: 'submitted',
+          kycSubmittedAt: new Date(),
+          accountActive: false
+        });
+      } else {
+        company.kycStatus = 'submitted';
+        company.kycSubmittedAt = new Date();
+        company.accountActive = false;
+      }
 
       res.json({
-        message: 'KYC documents submitted successfully',
+        message: 'KYC documents submitted successfully! Your account will be activated within 1-2 business days after verification.',
         kycId: kycRecord.id
       });
     } catch (error) {
       console.error('KYC submission error:', error);
-      res.status(500).json({ error: 'Internal server error: ' + error.message });
+      res.status(500).json({ error: 'Failed to submit KYC documents. Please try again.' });
     }
   });
 });
