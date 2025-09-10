@@ -732,6 +732,40 @@ app.post('/api/admin/clear-all', (req, res) => {
   res.json({ message: 'All data cleared successfully' });
 });
 
+// Test KYC submission (for testing only)
+app.post('/api/test/kyc', (req, res) => {
+  try {
+    const { businessRegistrationNumber, taxId, description } = req.body;
+    
+    if (!businessRegistrationNumber || !taxId) {
+      return res.status(400).json({ error: 'Business registration number and tax ID are required' });
+    }
+    
+    const kycRecord = {
+      id: uuidv4(),
+      companyId: 'test-company',
+      businessRegistrationNumber,
+      taxId,
+      description: description || '',
+      documents: {
+        businessLicense: 'pending_upload',
+        taxCertificate: 'pending_upload'
+      },
+      submittedAt: new Date(),
+      status: 'submitted'
+    };
+    
+    kycDocuments.push(kycRecord);
+    
+    res.json({
+      message: 'KYC test submission successful!',
+      kycId: kycRecord.id
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Test failed: ' + error.message });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
