@@ -1349,7 +1349,7 @@ app.get('/api/health', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-});// Force rebuild Wed Sep 10 15:16:00 +04 2025
+});// Force rebuild Wed Sep 10 19:20:00 +04 2025 - Individual signup system deployed
 // Individual email verification
 app.post('/api/auth/individual/verify-email', async (req, res) => {
   try {
