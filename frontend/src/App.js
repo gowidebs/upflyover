@@ -100,7 +100,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<SignupChoice />} />
               <Route path="/signup/individual" element={<IndividualSignup />} />
-              <Route path="/register" element={<Register />} />
+
               <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/verify-individual-email" element={<IndividualEmailVerify />} />
               <Route path="/user-type-selection" element={<UserTypeSelection />} />

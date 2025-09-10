@@ -174,7 +174,7 @@ const Navbar = () => {
               <ListItemIcon><Person /></ListItemIcon>
               <ListItemText primary="Login" />
             </ListItem>
-            <ListItem button onClick={() => { navigate('/register'); setMobileDrawerOpen(false); }}>
+            <ListItem button onClick={() => { navigate('/signup'); setMobileDrawerOpen(false); }}>
               <ListItemIcon><Person /></ListItemIcon>
               <ListItemText primary="Sign Up" />
             </ListItem>
@@ -283,7 +283,7 @@ const Navbar = () => {
                     borderColor: 'white',
                     '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' }
                   }}
-                  onClick={() => navigate('/register')}
+                  onClick={() => navigate('/signup')}
                 >
                   Sign Up
                 </Button>

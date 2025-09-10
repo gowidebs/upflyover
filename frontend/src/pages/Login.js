@@ -117,7 +117,7 @@ const Login = () => {
               <Link
                 component="button"
                 variant="body2"
-                onClick={() => navigate('/register')}
+                onClick={() => navigate('/signup')}
                 type="button"
               >
                 Don't have an account? Sign Up

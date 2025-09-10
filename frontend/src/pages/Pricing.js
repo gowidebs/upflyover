@@ -3,7 +3,7 @@ import {
   Container, Typography, Box, Grid, Card, CardContent, 
   Button, Stack, Chip, List, ListItem, ListItemIcon, ListItemText 
 } from '@mui/material';
-import { Check, Star, Business, TrendingUp, Person, Corporate } from '@mui/icons-material';
+import { Check, Star, Business, TrendingUp, Person } from '@mui/icons-material';
 import MobileAppSection from '../components/MobileAppSection';
 
 const Pricing = () => {
@@ -176,7 +176,7 @@ const Pricing = () => {
         </Typography>
         <Grid container spacing={4} sx={{ maxWidth: 800, mx: 'auto' }}>
           {[
-            { icon: <Corporate />, title: 'Unlimited Users', desc: 'No limits on team size' },
+            { icon: <Business />, title: 'Unlimited Users', desc: 'No limits on team size' },
             { icon: <TrendingUp />, title: 'Multi-Region Support', desc: 'Global deployment and compliance' },
             { icon: <Star />, title: 'Custom Development', desc: 'Tailored features and integrations' }
           ].map((feature, index) => (

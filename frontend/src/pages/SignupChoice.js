@@ -80,7 +80,7 @@ const SignupChoice = () => {
                     fullWidth
                     variant="outlined"
                     size="large"
-                    onClick={() => navigate('/register')}
+                    onClick={() => navigate('/signup')}
                   >
                     Sign Up as Company
                   </Button>

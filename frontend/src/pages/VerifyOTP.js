@@ -36,7 +36,7 @@ const VerifyOTP = () => {
     if (location.state?.companyId) {
       setCompanyId(location.state.companyId);
     } else {
-      navigate('/register');
+      navigate('/signup');
     }
   }, [location, navigate]);
 
