@@ -507,79 +507,55 @@ app.get('/api/auth/profile', authenticateToken, async (req, res) => {
 
 // KYC document submission
 app.post('/api/kyc/submit', authenticateToken, (req, res) => {
-  const uploadHandler = upload.fields([
-    { name: 'businessLicense', maxCount: 1 },
-    { name: 'taxCertificate', maxCount: 1 }
-  ]);
+  try {
+    const { businessRegistrationNumber, taxId, description } = req.body;
+    const companyId = req.company.id;
 
-  uploadHandler(req, res, async (err) => {
-    if (err) {
-      console.error('File upload error:', err);
-      return res.status(400).json({ error: err.message || 'File upload failed' });
+    console.log('KYC submission attempt:', { companyId, businessRegistrationNumber, taxId });
+
+    // Validate required fields
+    if (!businessRegistrationNumber || !taxId) {
+      return res.status(400).json({ error: 'Business registration number and tax ID are required' });
     }
 
-    try {
-      const { businessRegistrationNumber, taxId, description } = req.body;
-      const companyId = req.company.id;
-
-      console.log('KYC submission:', { companyId, businessRegistrationNumber, taxId });
-
-      // Validate required fields
-      if (!businessRegistrationNumber || !taxId) {
-        return res.status(400).json({ error: 'Business registration number and tax ID are required' });
-      }
-
-      // Find company using fallback method
-      let company;
-      if (useDatabase) {
-        company = await Company.findById(companyId);
-      } else {
-        company = companies.find(c => c.id === companyId);
-      }
-      
-      if (!company) {
-        return res.status(404).json({ error: 'Company not found' });
-      }
-
-      // Create KYC record
-      const kycRecord = {
-        id: uuidv4(),
-        companyId,
-        businessRegistrationNumber,
-        taxId,
-        description: description || '',
-        documents: {
-          businessLicense: req.files?.businessLicense?.[0]?.filename || null,
-          taxCertificate: req.files?.taxCertificate?.[0]?.filename || null
-        },
-        submittedAt: new Date(),
-        status: 'submitted'
-      };
-
-      kycDocuments.push(kycRecord);
-
-      // Update company KYC status
-      if (useDatabase) {
-        await Company.findByIdAndUpdate(companyId, {
-          kycStatus: 'submitted',
-          kycSubmittedAt: new Date(),
-          accountActive: false
-        });
-      } else {
-        company.kycStatus = 'submitted';
-        company.kycSubmittedAt = new Date();
-        company.accountActive = false;
-      }
-
-      res.json({
-        message: 'KYC documents submitted successfully! Your account will be activated within 1-2 business days after verification.',
-        kycId: kycRecord.id
-      });
-    } catch (error) {
-      console.error('KYC submission error:', error);
-      res.status(500).json({ error: 'Failed to submit KYC documents. Please try again.' });
+    // Find company
+    const company = companies.find(c => c.id === companyId);
+    if (!company) {
+      return res.status(404).json({ error: 'Company not found' });
     }
-  });
+
+    // Create KYC record
+    const kycRecord = {
+      id: uuidv4(),
+      companyId,
+      businessRegistrationNumber,
+      taxId,
+      description: description || '',
+      documents: {
+        businessLicense: 'pending_upload',
+        taxCertificate: 'pending_upload'
+      },
+      submittedAt: new Date(),
+      status: 'submitted'
+    };
+
+    kycDocuments.push(kycRecord);
+
+    // Update company KYC status
+    company.kycStatus = 'submitted';
+    company.kycSubmittedAt = new Date();
+    company.accountActive = false;
+
+    console.log('KYC record created successfully:', kycRecord.id);
+
+    res.json({
+      message: 'KYC information submitted successfully! Your account will be activated within 1-2 business days after verification.',
+      kycId: kycRecord.id
+    });
+  } catch (error) {
+    console.error('KYC submission error:', error);
+    res.status(500).json({ error: 'Failed to submit KYC information. Please try again.' });
+  }
 });
 
 // Update company profile
