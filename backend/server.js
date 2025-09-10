@@ -101,7 +101,7 @@ const upload = multer({
 
 // Hybrid Database System - Free start, easy scaling
 let useDatabase = false;
-let Company, KYCModel;
+let Company, Individual, KYCModel;
 
 // MongoDB Schemas (only created when needed)
 const createModels = () => {
@@ -118,23 +118,56 @@ const createModels = () => {
     emailVerified: { type: Boolean, default: false },
     phoneVerified: { type: Boolean, default: false },
     kycStatus: { type: String, default: 'pending' },
-    accountActive: { type: Boolean, default: false }
+    accountActive: { type: Boolean, default: false },
+    userType: { type: String, default: 'company' }
+  }, { timestamps: true });
+
+  const IndividualSchema = new mongoose.Schema({
+    email: { type: String, unique: true },
+    password: String,
+    fullName: String,
+    phone: String,
+    emiratesId: String,
+    dateOfBirth: Date,
+    nationality: String,
+    address: String,
+    emailVerified: { type: Boolean, default: false },
+    phoneVerified: { type: Boolean, default: false },
+    kycStatus: { type: String, default: 'pending' },
+    accountActive: { type: Boolean, default: false },
+    userType: { type: String, default: 'individual' },
+    requirementsPosted: { type: Number, default: 0 },
+    monthlyLimit: { type: Number, default: 4 }
   }, { timestamps: true });
 
   const KYCSchema = new mongoose.Schema({
-    companyId: String,
+    userId: String,
+    userType: { type: String, enum: ['company', 'individual'] },
+    // Company KYC fields
     businessRegistrationNumber: String,
     taxId: String,
     description: String,
+    // Individual KYC fields
+    fullName: String,
+    emiratesId: String,
+    dateOfBirth: Date,
+    nationality: String,
+    address: String,
     documents: {
+      // Company documents
       businessLicense: String,
-      taxCertificate: String
+      taxCertificate: String,
+      // Individual documents
+      emiratesIdFront: String,
+      emiratesIdBack: String,
+      passport: String
     },
     status: { type: String, default: 'submitted' }
   }, { timestamps: true });
 
   return {
     Company: mongoose.model('Company', CompanySchema),
+    Individual: mongoose.model('Individual', IndividualSchema),
     KYCModel: mongoose.model('KYC', KYCSchema)
   };
 };
@@ -144,6 +177,7 @@ if (process.env.MONGODB_URI) {
   mongoose.connection.on('connected', () => {
     const models = createModels();
     Company = models.Company;
+    Individual = models.Individual;
     KYCModel = models.KYCModel;
     useDatabase = true;
     console.log('🗄️ MongoDB connected - using persistent storage');
@@ -187,6 +221,7 @@ const migrateExistingData = async () => {
 
 // In-memory storage (free tier)
 let companies = [];
+let individuals = [];
 let kycDocuments = [];
 let requirements = [];
 let applications = [];
@@ -261,11 +296,11 @@ const authenticateToken = (req, res, next) => {
     return res.status(401).json({ error: 'Access token required' });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, company) => {
+  jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
       return res.status(403).json({ error: 'Invalid token' });
     }
-    req.company = company;
+    req.company = user; // Keep as req.company for backward compatibility
     next();
   });
 };
@@ -274,7 +309,72 @@ const authenticateToken = (req, res, next) => {
 
 
 
-// Register endpoint
+// Individual registration endpoint
+app.post('/api/auth/individual/register', async (req, res) => {
+  try {
+    const { email, password, userType } = req.body;
+
+    // Validate required fields
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Check if user already exists
+    const existingUser = individuals.find(u => u.email === email) || companies.find(c => c.email === email);
+    if (existingUser) {
+      return res.status(400).json({ error: 'User already exists with this email' });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create individual user
+    const individual = {
+      id: uuidv4(),
+      email,
+      password: hashedPassword,
+      userType: 'individual',
+      emailVerified: false,
+      phoneVerified: false,
+      kycStatus: 'pending',
+      accountActive: false,
+      requirementsPosted: 0,
+      monthlyLimit: 4,
+      createdAt: new Date()
+    };
+
+    individuals.push(individual);
+
+    // Send email OTP for verification
+    try {
+      const emailResult = await sendEmailOTP(email);
+      
+      if (!emailResult.success) {
+        return res.status(500).json({ 
+          error: 'Email verification service temporarily unavailable. Please try again later.',
+          code: 'VERIFICATION_SERVICE_ERROR'
+        });
+      }
+    } catch (error) {
+      console.error('Email OTP service error:', error);
+      return res.status(500).json({ 
+        error: 'Account verification is required but currently unavailable. Please try again later.',
+        code: 'VERIFICATION_REQUIRED'
+      });
+    }
+
+    res.status(201).json({
+      message: 'Registration successful! Please verify your email address.',
+      userId: individual.id,
+      requiresVerification: true
+    });
+  } catch (error) {
+    console.error('Individual registration error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Company register endpoint (existing)
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, email, password, industry, companySize, country, contactPerson, phone, website } = req.body;
@@ -307,7 +407,8 @@ app.post('/api/auth/register', async (req, res) => {
       emailVerified: false,
       phoneVerified: false,
       kycStatus: 'pending',
-      accountActive: false
+      accountActive: false,
+      userType: 'company'
     });
 
     // Store verification record
@@ -571,50 +672,70 @@ app.post('/api/auth/verify-remaining', authenticateToken, async (req, res) => {
   }
 });
 
-// Login endpoint
+// Unified login endpoint
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find company
-    const company = await DB.findCompany({ email });
-    if (!company) {
+    // Find user (company or individual)
+    let user = await DB.findCompany({ email });
+    let userType = 'company';
+    
+    if (!user) {
+      user = individuals.find(u => u.email === email);
+      userType = 'individual';
+    }
+
+    if (!user) {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
     // Check password
-    const isValidPassword = await bcrypt.compare(password, company.password);
+    const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
-    // Allow immediate login (email auto-verified)
-    // Additional verification through KYC process
+    // Check if email is verified
+    if (!user.emailVerified) {
+      return res.status(400).json({ 
+        error: 'Please verify your email address first',
+        requiresVerification: true,
+        userId: user.id,
+        userType
+      });
+    }
 
-    // Allow login but indicate KYC status
-    const needsKyc = company.kycStatus === 'pending' || company.kycStatus === 'rejected';
-    const kycSubmitted = company.kycStatus === 'submitted';
-    const accountActive = company.accountActive === true;
+    // Check if user type is selected (for new users)
+    if (!user.userType || user.userType === 'pending') {
+      return res.status(200).json({
+        message: 'Please select your account type',
+        requiresUserTypeSelection: true,
+        userId: user.id,
+        email: user.email
+      });
+    }
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: company.id, email: company.email },
+      { id: user.id, email: user.email, userType: user.userType },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
 
-    // Return company data without password
-    const { password: _, ...companyData } = company;
+    // Return user data without password
+    const { password: _, ...userData } = user;
 
     res.json({
       message: 'Login successful',
       token,
-      company: {
-        ...companyData,
-        needsKyc,
-        kycSubmitted,
-        accountActive,
-        needsAdditionalVerification: !company.emailVerified || !company.phoneVerified
+      user: {
+        ...userData,
+        userType,
+        needsKyc: user.kycStatus === 'pending' || user.kycStatus === 'rejected',
+        kycSubmitted: user.kycStatus === 'submitted',
+        accountActive: user.accountActive === true,
+        needsAdditionalVerification: !user.phoneVerified
       }
     });
   } catch (error) {
@@ -625,13 +746,20 @@ app.post('/api/auth/login', async (req, res) => {
 
 // Get profile endpoint
 app.get('/api/auth/profile', authenticateToken, async (req, res) => {
-  const company = await DB.findCompany(useDatabase ? { _id: req.company.id } : { id: req.company.id });
-  if (!company) {
-    return res.status(404).json({ error: 'Company not found' });
+  let user;
+  
+  if (req.company.userType === 'company') {
+    user = await DB.findCompany(useDatabase ? { _id: req.company.id } : { id: req.company.id });
+  } else {
+    user = individuals.find(u => u.id === req.company.id);
+  }
+  
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
   }
 
-  const { password: _, ...companyData } = company;
-  res.json({ company: companyData });
+  const { password: _, ...userData } = user;
+  res.json({ user: userData });
 });
 
 // KYC document submission
@@ -748,11 +876,24 @@ app.get('/api/kyc/status', authenticateToken, async (req, res) => {
 app.get('/api/admin/kyc/submissions', async (req, res) => {
   try {
     const submissions = kycDocuments.map(kyc => {
-      const company = companies.find(c => c.id === kyc.companyId);
+      let userName = 'Unknown';
+      let userEmail = 'Unknown';
+      
+      if (kyc.userType === 'company') {
+        const company = companies.find(c => c.id === kyc.userId);
+        userName = company?.name || 'Unknown Company';
+        userEmail = company?.email || 'Unknown';
+      } else if (kyc.userType === 'individual') {
+        const individual = individuals.find(i => i.id === kyc.userId);
+        userName = individual?.fullName || 'Unknown Individual';
+        userEmail = individual?.email || 'Unknown';
+      }
+      
       return {
         ...kyc,
-        companyName: company?.name || 'Unknown',
-        companyEmail: company?.email || 'Unknown'
+        userName,
+        userEmail,
+        userType: kyc.userType || 'company'
       };
     });
     res.json(submissions);
@@ -772,9 +913,15 @@ app.post('/api/admin/kyc/review', async (req, res) => {
       return res.status(404).json({ error: 'KYC record not found' });
     }
 
-    const company = companies.find(c => c.id === kycRecord.companyId);
-    if (!company) {
-      return res.status(404).json({ error: 'Company not found' });
+    let user;
+    if (kycRecord.userType === 'company') {
+      user = companies.find(c => c.id === kycRecord.userId);
+    } else {
+      user = individuals.find(i => i.id === kycRecord.userId);
+    }
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
 
     // Update KYC status
@@ -782,9 +929,9 @@ app.post('/api/admin/kyc/review', async (req, res) => {
     kycRecord.reviewedAt = new Date();
     kycRecord.reviewNotes = notes;
 
-    // Update company status
-    company.kycStatus = kycRecord.status;
-    company.accountActive = action === 'approve';
+    // Update user status
+    user.kycStatus = kycRecord.status;
+    user.accountActive = action === 'approve';
 
     res.json({
       message: `KYC ${action === 'approve' ? 'approved' : 'rejected'} successfully`,
@@ -836,18 +983,21 @@ app.post('/api/auth/reset-password', async (req, res) => {
 // Admin: Get platform statistics
 app.get('/api/admin/stats', (req, res) => {
   const stats = {
-    totalRegistrations: companies.length,
+    totalRegistrations: companies.length + individuals.length,
+    totalCompanies: companies.length,
+    totalIndividuals: individuals.length,
     verifiedCompanies: companies.filter(c => c.emailVerified && c.phoneVerified).length,
+    verifiedIndividuals: individuals.filter(i => i.emailVerified && i.phoneVerified).length,
     kycSubmissions: kycDocuments.length,
     approvedKyc: kycDocuments.filter(k => k.status === 'approved').length,
     pendingKyc: kycDocuments.filter(k => k.status === 'submitted').length,
-    activeAccounts: companies.filter(c => c.accountActive).length,
+    activeAccounts: companies.filter(c => c.accountActive).length + individuals.filter(i => i.accountActive).length,
     totalRequirements: requirements.length,
     openRequirements: requirements.filter(r => r.status === 'open').length,
     totalApplications: applications.length,
-    recentRegistrations: companies.filter(c => {
+    recentRegistrations: [...companies, ...individuals].filter(u => {
       const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      return new Date(c.createdAt || c.updatedAt) > dayAgo;
+      return new Date(u.createdAt || u.updatedAt) > dayAgo;
     }).length
   };
   
@@ -894,6 +1044,7 @@ app.post('/api/admin/clear-all', (req, res) => {
   }
   
   companies.length = 0;
+  individuals.length = 0;
   kycDocuments.length = 0;
   requirements.length = 0;
   applications.length = 0;
@@ -904,14 +1055,37 @@ app.post('/api/admin/clear-all', (req, res) => {
 
 // Requirements endpoints
 
-// Get all requirements (simplified)
+// Get all requirements (only for companies)
 app.get('/api/requirements', authenticateToken, async (req, res) => {
   try {
+    const userType = req.company.userType;
+    
+    // Only companies can browse requirements
+    if (userType !== 'company') {
+      return res.status(403).json({ error: 'Only companies can browse requirements. Individuals can only post requirements.' });
+    }
+
+    // Check if company account is active
+    const company = companies.find(c => c.id === req.company.id);
+    if (!company || !company.accountActive) {
+      return res.status(400).json({ error: 'Please complete KYC verification to browse requirements' });
+    }
+    
     const allRequirements = requirements.map(req => {
-      const posterCompany = companies.find(c => c.id === req.companyId);
+      let posterName = 'Anonymous';
+      
+      if (req.userType === 'company') {
+        const posterCompany = companies.find(c => c.id === req.userId);
+        posterName = posterCompany?.name || 'Company';
+      } else {
+        const posterIndividual = individuals.find(i => i.id === req.userId);
+        posterName = posterIndividual?.fullName || 'Individual';
+      }
+      
       return {
         ...req,
-        companyName: posterCompany?.name || 'Anonymous',
+        posterName,
+        posterType: req.userType,
         isRecommended: false // Will add smart matching later
       };
     });
@@ -931,34 +1105,76 @@ app.get('/api/requirements', authenticateToken, async (req, res) => {
 // Get my requirements
 app.get('/api/requirements/my', authenticateToken, async (req, res) => {
   try {
-    const companyId = req.company.id;
-    const myRequirements = requirements.filter(req => req.companyId === companyId);
+    const userId = req.company.id;
+    const userType = req.company.userType;
+    const myRequirements = requirements.filter(req => req.userId === userId);
     
-    // Add application count
+    // Add application count and remaining limit for individuals
     const requirementsWithApps = myRequirements.map(req => ({
       ...req,
       applications: applications.filter(app => app.requirementId === req.id).length
     }));
+
+    let responseData = { requirements: requirementsWithApps };
+
+    // Add limit info for individuals
+    if (userType === 'individual') {
+      const individual = individuals.find(u => u.id === userId);
+      responseData.limitInfo = {
+        posted: individual?.requirementsPosted || 0,
+        limit: individual?.monthlyLimit || 4,
+        remaining: (individual?.monthlyLimit || 4) - (individual?.requirementsPosted || 0)
+      };
+    }
     
-    res.json({ requirements: requirementsWithApps });
+    res.json(responseData);
   } catch (error) {
     res.status(500).json({ error: 'Failed to load requirements' });
   }
 });
 
-// Post new requirement (simplified)
+// Post new requirement (supports both individuals and companies)
 app.post('/api/requirements', authenticateToken, async (req, res) => {
   try {
     const { title, description, category, budget, timeline, location, requirements: reqText } = req.body;
-    const companyId = req.company.id;
+    const userId = req.company.id;
+    const userType = req.company.userType;
     
     if (!title || !description || !category) {
       return res.status(400).json({ error: 'Title, description, and category are required' });
     }
+
+    // Check if individual user has reached monthly limit
+    if (userType === 'individual') {
+      const individual = individuals.find(u => u.id === userId);
+      if (!individual) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Check if account is active (KYC approved)
+      if (!individual.accountActive) {
+        return res.status(400).json({ error: 'Please complete KYC verification to post requirements' });
+      }
+
+      // Check monthly limit (reset logic would be implemented with proper date tracking)
+      if (individual.requirementsPosted >= individual.monthlyLimit) {
+        return res.status(400).json({ 
+          error: `You have reached your monthly limit of ${individual.monthlyLimit} requirements. Upgrade to Professional plan for unlimited posting.`,
+          code: 'MONTHLY_LIMIT_REACHED'
+        });
+      }
+    } else {
+      // Company user - check if account is active
+      const company = companies.find(c => c.id === userId);
+      if (!company || !company.accountActive) {
+        return res.status(400).json({ error: 'Please complete KYC verification to browse requirements' });
+      }
+    }
     
     const requirement = {
       id: uuidv4(),
-      companyId,
+      userId,
+      userType,
       title,
       description,
       category,
@@ -966,13 +1182,19 @@ app.post('/api/requirements', authenticateToken, async (req, res) => {
       timeline: timeline || '',
       location: location || '',
       requirements: reqText || '',
-      attachments: [], // Will add file upload later
+      attachments: [],
       status: 'open',
       createdAt: new Date(),
       applications: 0
     };
     
     requirements.push(requirement);
+
+    // Increment individual's requirement count
+    if (userType === 'individual') {
+      const individual = individuals.find(u => u.id === userId);
+      individual.requirementsPosted += 1;
+    }
     
     res.json({ success: true, requirement });
   } catch (error) {
@@ -981,12 +1203,24 @@ app.post('/api/requirements', authenticateToken, async (req, res) => {
   }
 });
 
-// Apply to requirement
+// Apply to requirement (only companies can apply)
 app.post('/api/requirements/:id/apply', authenticateToken, async (req, res) => {
   try {
     const requirementId = req.params.id;
-    const companyId = req.company.id;
+    const userId = req.company.id;
+    const userType = req.company.userType;
     const { proposal, timeline, budget, experience, portfolio } = req.body;
+    
+    // Only companies can apply to requirements
+    if (userType !== 'company') {
+      return res.status(403).json({ error: 'Only companies can apply to requirements' });
+    }
+
+    // Check if company account is active
+    const company = companies.find(c => c.id === userId);
+    if (!company || !company.accountActive) {
+      return res.status(400).json({ error: 'Please complete KYC verification to apply to requirements' });
+    }
     
     if (!proposal) {
       return res.status(400).json({ error: 'Proposal is required' });
@@ -994,7 +1228,7 @@ app.post('/api/requirements/:id/apply', authenticateToken, async (req, res) => {
     
     // Check if already applied
     const existingApp = applications.find(app => 
-      app.requirementId === requirementId && app.companyId === companyId
+      app.requirementId === requirementId && app.companyId === userId
     );
     
     if (existingApp) {
@@ -1009,7 +1243,7 @@ app.post('/api/requirements/:id/apply', authenticateToken, async (req, res) => {
     const application = {
       id: uuidv4(),
       requirementId,
-      companyId,
+      companyId: userId,
       requirementTitle: requirement.title,
       proposal,
       timeline: timeline || '',
@@ -1029,11 +1263,18 @@ app.post('/api/requirements/:id/apply', authenticateToken, async (req, res) => {
   }
 });
 
-// Get my applications
+// Get my applications (only for companies)
 app.get('/api/applications/my', authenticateToken, async (req, res) => {
   try {
-    const companyId = req.company.id;
-    const myApplications = applications.filter(app => app.companyId === companyId);
+    const userId = req.company.id;
+    const userType = req.company.userType;
+    
+    // Only companies have applications
+    if (userType !== 'company') {
+      return res.status(403).json({ error: 'Only companies can view applications' });
+    }
+    
+    const myApplications = applications.filter(app => app.companyId === userId);
     res.json({ applications: myApplications });
   } catch (error) {
     res.status(500).json({ error: 'Failed to load applications' });
@@ -1044,10 +1285,10 @@ app.get('/api/applications/my', authenticateToken, async (req, res) => {
 app.get('/api/requirements/:id/applications', authenticateToken, async (req, res) => {
   try {
     const requirementId = req.params.id;
-    const companyId = req.company.id;
+    const userId = req.company.id;
     
     // Verify requirement belongs to user
-    const requirement = requirements.find(req => req.id === requirementId && req.companyId === companyId);
+    const requirement = requirements.find(req => req.id === requirementId && req.userId === userId);
     if (!requirement) {
       return res.status(404).json({ error: 'Requirement not found' });
     }
@@ -1109,6 +1350,187 @@ app.get('/api/health', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });// Force rebuild Wed Sep 10 15:16:00 +04 2025
+// Individual email verification
+app.post('/api/auth/individual/verify-email', async (req, res) => {
+  try {
+    const { userId, otp } = req.body;
+
+    const individual = individuals.find(u => u.id === userId);
+    if (!individual) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Verify email OTP with Twilio
+    const emailVerifyResult = await verifyOTP(individual.email, otp);
+    if (!emailVerifyResult.success) {
+      return res.status(400).json({ error: 'Invalid email OTP' });
+    }
+
+    individual.emailVerified = true;
+
+    res.json({
+      message: 'Email verified successfully',
+      userId: individual.id,
+      email: individual.email
+    });
+  } catch (error) {
+    console.error('Individual email verification error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// User type selection
+app.post('/api/auth/select-user-type', async (req, res) => {
+  try {
+    const { userId, userType } = req.body;
+
+    let user;
+    if (userType === 'individual') {
+      user = individuals.find(u => u.id === userId);
+    } else {
+      user = companies.find(c => c.id === userId);
+    }
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    user.userType = userType;
+
+    res.json({
+      message: 'User type selected successfully',
+      userType
+    });
+  } catch (error) {
+    console.error('User type selection error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Individual mobile verification
+app.post('/api/auth/individual/verify-mobile', async (req, res) => {
+  try {
+    const { userId, phone } = req.body;
+
+    const individual = individuals.find(u => u.id === userId);
+    if (!individual) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Send SMS OTP
+    const smsResult = await sendSMSOTP(phone);
+    if (!smsResult.success) {
+      return res.status(500).json({ error: 'Failed to send SMS OTP' });
+    }
+
+    individual.phone = phone;
+
+    res.json({
+      message: 'OTP sent to your mobile number'
+    });
+  } catch (error) {
+    console.error('Individual mobile verification error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Individual OTP verification
+app.post('/api/auth/individual/verify-otp', async (req, res) => {
+  try {
+    const { userId, phone, otp } = req.body;
+
+    const individual = individuals.find(u => u.id === userId);
+    if (!individual) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Verify phone OTP with Twilio
+    const phoneVerifyResult = await verifyOTP(phone, otp);
+    if (!phoneVerifyResult.success) {
+      return res.status(400).json({ error: 'Invalid OTP' });
+    }
+
+    individual.phoneVerified = true;
+
+    res.json({
+      message: 'Mobile number verified successfully'
+    });
+  } catch (error) {
+    console.error('Individual OTP verification error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Individual personal details
+app.post('/api/auth/individual/personal-details', async (req, res) => {
+  try {
+    const { userId, fullName, emiratesId, dateOfBirth, nationality, address } = req.body;
+
+    const individual = individuals.find(u => u.id === userId);
+    if (!individual) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    individual.fullName = fullName;
+    individual.emiratesId = emiratesId;
+    individual.dateOfBirth = dateOfBirth;
+    individual.nationality = nationality;
+    individual.address = address;
+
+    res.json({
+      message: 'Personal details saved successfully'
+    });
+  } catch (error) {
+    console.error('Individual personal details error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Individual KYC submission
+app.post('/api/auth/individual/kyc-submit', upload.fields([
+  { name: 'emiratesIdFront', maxCount: 1 },
+  { name: 'emiratesIdBack', maxCount: 1 },
+  { name: 'passport', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    const individual = individuals.find(u => u.id === userId);
+    if (!individual) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const kycRecord = {
+      id: uuidv4(),
+      userId,
+      userType: 'individual',
+      fullName: individual.fullName,
+      emiratesId: individual.emiratesId,
+      dateOfBirth: individual.dateOfBirth,
+      nationality: individual.nationality,
+      address: individual.address,
+      documents: {
+        emiratesIdFront: req.files?.emiratesIdFront?.[0]?.filename,
+        emiratesIdBack: req.files?.emiratesIdBack?.[0]?.filename,
+        passport: req.files?.passport?.[0]?.filename
+      },
+      submittedAt: new Date(),
+      status: 'submitted'
+    };
+
+    kycDocuments.push(kycRecord);
+    individual.kycStatus = 'submitted';
+
+    res.json({
+      message: 'KYC documents submitted successfully! Your account will be reviewed within 1-2 business days.',
+      kycId: kycRecord.id
+    });
+  } catch (error) {
+    console.error('Individual KYC submission error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Add phone verification after KYC approval
 app.post('/api/kyc/verify-phone', authenticateToken, async (req, res) => {
   try {

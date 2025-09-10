@@ -34,6 +34,11 @@ import AdminLogin from './pages/AdminLogin';
 import AdminKYC from './pages/AdminKYC';
 import KYCPending from './pages/KYCPending';
 import CompanyProfile from './pages/CompanyProfile';
+import SignupChoice from './pages/SignupChoice';
+import IndividualSignup from './pages/IndividualSignup';
+import UserTypeSelection from './pages/UserTypeSelection';
+import IndividualVerification from './pages/IndividualVerification';
+import IndividualEmailVerify from './pages/IndividualEmailVerify';
 import { AuthProvider } from './contexts/AuthContext';
 import Footer from './components/Footer';
 
@@ -93,7 +98,12 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<SignupChoice />} />
+              <Route path="/signup/individual" element={<IndividualSignup />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/verify-email" element={<IndividualEmailVerify />} />
+              <Route path="/user-type-selection" element={<UserTypeSelection />} />
+              <Route path="/individual-verification" element={<IndividualVerification />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/verify-otp" element={<VerifyOTP />} />
@@ -105,7 +115,6 @@ function App() {
               <Route path="/admin/kyc" element={<AdminKYC />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/companies" element={<Companies />} />
-              <Route path="/profile" element={<Profile />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/pricing" element={<Pricing />} />
