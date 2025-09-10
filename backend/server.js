@@ -833,13 +833,18 @@ app.get('/api/requirements', authenticateToken, async (req, res) => {
       const posterCompany = companies.find(c => c.id === req.companyId);
       
       // Calculate match score based on company services vs requirement category
-      let matchScore = 0;
-      if (currentCompanyServices.length > 0) {
-        const hasMatchingService = currentCompanyServices.some(service => 
-          service.category?.toLowerCase() === req.category?.toLowerCase() ||
-          service.title?.toLowerCase().includes(req.category?.toLowerCase()) ||
-          req.category?.toLowerCase().includes(service.category?.toLowerCase())
-        );
+      let matchScore = 20; // Default score
+      if (currentCompanyServices && currentCompanyServices.length > 0) {
+        const hasMatchingService = currentCompanyServices.some(service => {
+          if (!service || !req.category) return false;
+          const serviceCategory = (service.category || '').toLowerCase();
+          const serviceTitle = (service.title || '').toLowerCase();
+          const reqCategory = req.category.toLowerCase();
+          
+          return serviceCategory === reqCategory ||
+                 serviceTitle.includes(reqCategory) ||
+                 reqCategory.includes(serviceCategory);
+        });
         matchScore = hasMatchingService ? 90 : 20;
       }
       
@@ -902,7 +907,7 @@ app.post('/api/requirements', authenticateToken, (req, res) => {
       }
       
       // Process uploaded files
-      const attachments = req.files ? req.files.map(file => ({
+      const attachments = (req.files && req.files.length > 0) ? req.files.map(file => ({
         filename: file.filename,
         originalName: file.originalname,
         size: file.size,

@@ -148,8 +148,18 @@ const Requirements = () => {
   };
   
   const handleFileChange = (event) => {
-    const files = Array.from(event.target.files);
-    setAttachments(prev => [...prev, ...files]);
+    const files = Array.from(event.target.files || []);
+    
+    // Validate file size (10MB limit)
+    const validFiles = files.filter(file => {
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`File ${file.name} is too large. Maximum size is 10MB.`);
+        return false;
+      }
+      return true;
+    });
+    
+    setAttachments(prev => [...prev, ...validFiles]);
   };
   
   const removeAttachment = (index) => {
@@ -357,17 +367,17 @@ const Requirements = () => {
                       {req.attachments && req.attachments.length > 0 && (
                         <Box sx={{ mb: 2 }}>
                           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            Attachments:
+                            📎 Attachments ({req.attachments.length}):
                           </Typography>
-                          <Stack direction="row" spacing={1} flexWrap="wrap">
+                          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                             {req.attachments.map((att, index) => (
                               <Chip
                                 key={index}
-                                label={att.originalName}
+                                label={att.originalName || `File ${index + 1}`}
                                 size="small"
                                 variant="outlined"
                                 onClick={() => downloadAttachment(req.id, att.filename, att.originalName)}
-                                sx={{ cursor: 'pointer' }}
+                                sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
                               />
                             ))}
                           </Stack>
