@@ -165,7 +165,7 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 // Verify email OTP
-app.post('/api/auth/verify-email-otp', (req, res) => {
+app.post('/api/auth/verify-email-otp', async (req, res) => {
   try {
     const { companyId, otp } = req.body;
 
@@ -206,7 +206,7 @@ app.post('/api/auth/verify-email-otp', (req, res) => {
 });
 
 // Verify phone OTP
-app.post('/api/auth/verify-phone-otp', (req, res) => {
+app.post('/api/auth/verify-phone-otp', async (req, res) => {
   try {
     const { companyId, otp } = req.body;
 
@@ -247,7 +247,7 @@ app.post('/api/auth/verify-phone-otp', (req, res) => {
 });
 
 // Complete verification and login
-app.post('/api/auth/complete-verification', (req, res) => {
+app.post('/api/auth/complete-verification', async (req, res) => {
   try {
     const { companyId } = req.body;
 
