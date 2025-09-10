@@ -574,13 +574,13 @@ app.post('/api/kyc/submit', authenticateToken, (req, res) => {
 });
 
 // Update company profile
-app.put('/api/company/profile', authenticateToken, (req, res) => {
+app.put('/api/company/profile', authenticateToken, async (req, res) => {
   try {
     const companyId = req.company.id;
     const updates = req.body;
 
     // Find company
-    const company = await DB.findCompany(useDatabase ? { _id: companyId } : { id: companyId });
+    const company = companies.find(c => c.id === companyId);
     if (!company) {
       return res.status(404).json({ error: 'Company not found' });
     }
@@ -610,7 +610,7 @@ app.put('/api/company/profile', authenticateToken, (req, res) => {
 });
 
 // Get KYC status
-app.get('/api/kyc/status', authenticateToken, (req, res) => {
+app.get('/api/kyc/status', authenticateToken, async (req, res) => {
   try {
     const companyId = req.company.id;
     const kycRecord = kycDocuments.find(kyc => kyc.companyId === companyId);
@@ -627,16 +627,16 @@ app.get('/api/kyc/status', authenticateToken, (req, res) => {
 });
 
 // Admin: Get all KYC submissions
-app.get('/api/admin/kyc/submissions', (req, res) => {
+app.get('/api/admin/kyc/submissions', async (req, res) => {
   try {
-    const submissions = await Promise.all(kycDocuments.map(async kyc => {
-      const company = await DB.findCompany(useDatabase ? { _id: kyc.companyId } : { id: kyc.companyId });
+    const submissions = kycDocuments.map(kyc => {
+      const company = companies.find(c => c.id === kyc.companyId);
       return {
         ...kyc,
         companyName: company?.name || 'Unknown',
         companyEmail: company?.email || 'Unknown'
       };
-    }));
+    });
     res.json(submissions);
   } catch (error) {
     console.error('Admin KYC fetch error:', error);
@@ -645,7 +645,7 @@ app.get('/api/admin/kyc/submissions', (req, res) => {
 });
 
 // Admin: Review KYC submission
-app.post('/api/admin/kyc/review', (req, res) => {
+app.post('/api/admin/kyc/review', async (req, res) => {
   try {
     const { kycId, action, notes } = req.body;
     
@@ -654,7 +654,7 @@ app.post('/api/admin/kyc/review', (req, res) => {
       return res.status(404).json({ error: 'KYC record not found' });
     }
 
-    const company = await DB.findCompany(useDatabase ? { _id: kycRecord.companyId } : { id: kycRecord.companyId });
+    const company = companies.find(c => c.id === kycRecord.companyId);
     if (!company) {
       return res.status(404).json({ error: 'Company not found' });
     }
@@ -665,10 +665,8 @@ app.post('/api/admin/kyc/review', (req, res) => {
     kycRecord.reviewNotes = notes;
 
     // Update company status
-    await DB.updateCompany(kycRecord.companyId, {
-      kycStatus: kycRecord.status,
-      accountActive: action === 'approve'
-    });
+    company.kycStatus = kycRecord.status;
+    company.accountActive = action === 'approve';
 
     res.json({
       message: `KYC ${action === 'approve' ? 'approved' : 'rejected'} successfully`,
@@ -702,7 +700,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
   try {
     const { email } = req.body;
     
-    const company = await DB.findCompany({ email });
+    const company = companies.find(c => c.email === email);
     if (!company) {
       return res.status(404).json({ error: 'Company not found' });
     }
