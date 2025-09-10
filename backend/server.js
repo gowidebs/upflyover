@@ -305,9 +305,19 @@ app.post('/api/auth/register', async (req, res) => {
       expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
     });
 
-    // Auto-verify email for now (no Twilio dependency)
-    company.emailVerified = true;
-    console.log(`Email auto-verified for: ${email}`);
+    // Send OTPs via Twilio Verify
+    try {
+      const emailResult = await sendEmailOTP(email);
+      const smsResult = await sendSMSOTP(phone);
+      
+      console.log(`OTPs sent - Email: ${emailResult.success}, SMS: ${smsResult.success}`);
+      
+      if (!emailResult.success || !smsResult.success) {
+        console.error('OTP sending failed:', { emailResult, smsResult });
+      }
+    } catch (error) {
+      console.error('Error sending OTPs:', error);
+    }
 
     res.status(201).json({
       message: 'Registration successful! Please verify your email and phone number.',
@@ -409,8 +419,14 @@ app.post('/api/auth/complete-verification', async (req, res) => {
       return res.status(400).json({ error: 'Company not found' });
     }
 
-    // Email auto-verified during registration
-    // Phone verification happens after KYC approval
+    // Check if at least one contact method is verified
+    if (!company.emailVerified && !company.phoneVerified) {
+      return res.status(400).json({ 
+        error: 'Please verify your email or phone number before logging in',
+        requiresVerification: true,
+        companyId: company.id
+      });
+    }
 
     // Remove OTP record
     const otpIndex = otpStorage.findIndex(o => o.companyId === companyId);
