@@ -49,9 +49,7 @@ const KYC = () => {
   });
   const [files, setFiles] = useState({
     businessLicense: null,
-    taxCertificate: null,
-    moa: null,
-    aoa: null
+    taxCertificate: null
   });
   const [kycStatus, setKycStatus] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -62,30 +60,16 @@ const KYC = () => {
   const requiredDocuments = [
     {
       key: 'businessLicense',
-      title: 'Business License',
-      description: 'Valid business registration certificate',
+      title: 'Business License / Registration Certificate',
+      description: 'Valid business registration certificate or license',
       icon: <Business />,
       required: true
     },
     {
       key: 'taxCertificate',
-      title: 'Tax Certificate',
-      description: 'Tax registration certificate',
+      title: 'Tax Registration Certificate',
+      description: 'Tax registration certificate or VAT certificate',
       icon: <AccountBalance />,
-      required: true
-    },
-    {
-      key: 'moa',
-      title: 'Memorandum of Association (MOA)',
-      description: 'Company memorandum of association',
-      icon: <Description />,
-      required: true
-    },
-    {
-      key: 'aoa',
-      title: 'Articles of Association (AOA)',
-      description: 'Company articles of association',
-      icon: <VerifiedUser />,
       required: true
     }
   ];
