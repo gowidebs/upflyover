@@ -161,6 +161,8 @@ const migrateExistingData = async () => {
 // In-memory storage (free tier)
 let companies = [];
 let kycDocuments = [];
+let requirements = [];
+let applications = [];
 const otpStorage = [];
 
 // Auto-migration function (when you add MongoDB later)
@@ -749,6 +751,9 @@ app.get('/api/admin/stats', (req, res) => {
     approvedKyc: kycDocuments.filter(k => k.status === 'approved').length,
     pendingKyc: kycDocuments.filter(k => k.status === 'submitted').length,
     activeAccounts: companies.filter(c => c.accountActive).length,
+    totalRequirements: requirements.length,
+    openRequirements: requirements.filter(r => r.status === 'open').length,
+    totalApplications: applications.length,
     recentRegistrations: companies.filter(c => {
       const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
       return new Date(c.createdAt || c.updatedAt) > dayAgo;
@@ -770,6 +775,159 @@ app.post('/api/admin/clear-all', (req, res) => {
   otpStorage.length = 0;
   
   res.json({ message: 'All data cleared successfully' });
+});
+
+// Requirements endpoints
+
+// Get all requirements
+app.get('/api/requirements', authenticateToken, async (req, res) => {
+  try {
+    const allRequirements = requirements.map(req => ({
+      ...req,
+      companyName: companies.find(c => c.id === req.companyId)?.name || 'Anonymous'
+    }));
+    res.json({ requirements: allRequirements });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load requirements' });
+  }
+});
+
+// Get my requirements
+app.get('/api/requirements/my', authenticateToken, async (req, res) => {
+  try {
+    const companyId = req.company.id;
+    const myRequirements = requirements.filter(req => req.companyId === companyId);
+    
+    // Add application count
+    const requirementsWithApps = myRequirements.map(req => ({
+      ...req,
+      applications: applications.filter(app => app.requirementId === req.id).length
+    }));
+    
+    res.json({ requirements: requirementsWithApps });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load requirements' });
+  }
+});
+
+// Post new requirement
+app.post('/api/requirements', authenticateToken, async (req, res) => {
+  try {
+    const { title, description, category, budget, timeline, location, requirements: reqText } = req.body;
+    const companyId = req.company.id;
+    
+    if (!title || !description || !category) {
+      return res.status(400).json({ error: 'Title, description, and category are required' });
+    }
+    
+    const requirement = {
+      id: uuidv4(),
+      companyId,
+      title,
+      description,
+      category,
+      budget: budget || '',
+      timeline: timeline || '',
+      location: location || '',
+      requirements: reqText || '',
+      status: 'open',
+      createdAt: new Date(),
+      applications: 0
+    };
+    
+    requirements.push(requirement);
+    
+    res.json({ success: true, requirement });
+  } catch (error) {
+    console.error('Error posting requirement:', error);
+    res.status(500).json({ error: 'Failed to post requirement' });
+  }
+});
+
+// Apply to requirement
+app.post('/api/requirements/:id/apply', authenticateToken, async (req, res) => {
+  try {
+    const requirementId = req.params.id;
+    const companyId = req.company.id;
+    const { proposal, timeline, budget, experience, portfolio } = req.body;
+    
+    if (!proposal) {
+      return res.status(400).json({ error: 'Proposal is required' });
+    }
+    
+    // Check if already applied
+    const existingApp = applications.find(app => 
+      app.requirementId === requirementId && app.companyId === companyId
+    );
+    
+    if (existingApp) {
+      return res.status(400).json({ error: 'You have already applied to this requirement' });
+    }
+    
+    const requirement = requirements.find(req => req.id === requirementId);
+    if (!requirement) {
+      return res.status(404).json({ error: 'Requirement not found' });
+    }
+    
+    const application = {
+      id: uuidv4(),
+      requirementId,
+      companyId,
+      requirementTitle: requirement.title,
+      proposal,
+      timeline: timeline || '',
+      budget: budget || '',
+      experience: experience || '',
+      portfolio: portfolio || '',
+      status: 'pending',
+      appliedAt: new Date()
+    };
+    
+    applications.push(application);
+    
+    res.json({ success: true, application });
+  } catch (error) {
+    console.error('Error submitting application:', error);
+    res.status(500).json({ error: 'Failed to submit application' });
+  }
+});
+
+// Get my applications
+app.get('/api/applications/my', authenticateToken, async (req, res) => {
+  try {
+    const companyId = req.company.id;
+    const myApplications = applications.filter(app => app.companyId === companyId);
+    res.json({ applications: myApplications });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load applications' });
+  }
+});
+
+// Get applications for my requirements
+app.get('/api/requirements/:id/applications', authenticateToken, async (req, res) => {
+  try {
+    const requirementId = req.params.id;
+    const companyId = req.company.id;
+    
+    // Verify requirement belongs to user
+    const requirement = requirements.find(req => req.id === requirementId && req.companyId === companyId);
+    if (!requirement) {
+      return res.status(404).json({ error: 'Requirement not found' });
+    }
+    
+    const reqApplications = applications.filter(app => app.requirementId === requirementId);
+    
+    // Add company info to applications
+    const applicationsWithCompany = reqApplications.map(app => ({
+      ...app,
+      companyName: companies.find(c => c.id === app.companyId)?.name || 'Anonymous',
+      companyEmail: companies.find(c => c.id === app.companyId)?.email || ''
+    }));
+    
+    res.json({ applications: applicationsWithCompany });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load applications' });
+  }
 });
 
 // Test KYC submission (for testing only)
