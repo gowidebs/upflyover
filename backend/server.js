@@ -72,28 +72,115 @@ const upload = multer({
   }
 });
 
-// In-memory storage with file backup
+// Hybrid Database System - Free start, easy scaling
+let useDatabase = false;
+let Company, KYCModel;
+
+// MongoDB Schemas (only created when needed)
+const createModels = () => {
+  const CompanySchema = new mongoose.Schema({
+    name: String,
+    email: { type: String, unique: true },
+    password: String,
+    industry: String,
+    companySize: String,
+    country: String,
+    contactPerson: String,
+    phone: String,
+    website: String,
+    emailVerified: { type: Boolean, default: false },
+    phoneVerified: { type: Boolean, default: false },
+    kycStatus: { type: String, default: 'pending' },
+    accountActive: { type: Boolean, default: false }
+  }, { timestamps: true });
+
+  const KYCSchema = new mongoose.Schema({
+    companyId: String,
+    businessRegistrationNumber: String,
+    taxId: String,
+    description: String,
+    documents: {
+      businessLicense: String,
+      taxCertificate: String
+    },
+    status: { type: String, default: 'submitted' }
+  }, { timestamps: true });
+
+  return {
+    Company: mongoose.model('Company', CompanySchema),
+    KYCModel: mongoose.model('KYC', KYCSchema)
+  };
+};
+
+// Auto-detect database availability
+if (process.env.MONGODB_URI && mongoose.connection.readyState === 1) {
+  const models = createModels();
+  Company = models.Company;
+  KYCModel = models.KYCModel;
+  useDatabase = true;
+  console.log('🗄️ Using MongoDB Atlas (Production)');
+} else {
+  console.log('💾 Using in-memory storage (Free tier - auto-scales to MongoDB)');
+}
+
+// In-memory storage (free tier)
 let companies = [];
 let kycDocuments = [];
 const otpStorage = [];
 
-// Load data from file on startup
-try {
-  if (fs.existsSync('data.json')) {
-    const data = JSON.parse(fs.readFileSync('data.json', 'utf8'));
-    companies = data.companies || [];
-    kycDocuments = data.kycDocuments || [];
+// Auto-migration function (when you add MongoDB later)
+const migrateToDatabase = async () => {
+  if (!useDatabase && process.env.MONGODB_URI) {
+    try {
+      const models = createModels();
+      Company = models.Company;
+      KYCModel = models.KYCModel;
+      
+      // Migrate existing data
+      for (const company of companies) {
+        await new Company(company).save();
+      }
+      for (const kyc of kycDocuments) {
+        await new KYCModel(kyc).save();
+      }
+      
+      useDatabase = true;
+      console.log('✅ Migrated to MongoDB successfully!');
+      return true;
+    } catch (error) {
+      console.log('Migration failed, continuing with in-memory');
+      return false;
+    }
   }
-} catch (error) {
-  console.log('No existing data file, starting fresh');
-}
+  return false;
+};
 
-// Save data to file
-const saveData = () => {
-  try {
-    fs.writeFileSync('data.json', JSON.stringify({ companies, kycDocuments }, null, 2));
-  } catch (error) {
-    console.error('Failed to save data:', error);
+// Database abstraction layer
+const DB = {
+  async findCompany(query) {
+    if (useDatabase) {
+      return await Company.findOne(query);
+    }
+    return companies.find(c => Object.keys(query).every(key => c[key] === query[key]));
+  },
+  
+  async saveCompany(companyData) {
+    if (useDatabase) {
+      const company = new Company(companyData);
+      return await company.save();
+    }
+    const company = { id: uuidv4(), ...companyData };
+    companies.push(company);
+    return company;
+  },
+  
+  async updateCompany(id, updates) {
+    if (useDatabase) {
+      return await Company.findByIdAndUpdate(id, updates, { new: true });
+    }
+    const company = companies.find(c => c.id === id || c._id === id);
+    if (company) Object.assign(company, updates);
+    return company;
   }
 };
 
@@ -125,7 +212,7 @@ app.post('/api/auth/register', async (req, res) => {
     const { name, email, password, industry, companySize, country, contactPerson, phone, website } = req.body;
 
     // Check if company already exists
-    const existingCompany = await Company.findOne({ email });
+    const existingCompany = await DB.findCompany({ email });
     if (existingCompany) {
       return res.status(400).json({ error: 'Company already exists with this email' });
     }
@@ -133,8 +220,8 @@ app.post('/api/auth/register', async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create company (not verified yet)
-    const company = new Company({
+    // Create company using abstraction layer
+    const company = await DB.saveCompany({
       name,
       email,
       password: hashedPassword,
@@ -143,10 +230,12 @@ app.post('/api/auth/register', async (req, res) => {
       country,
       contactPerson: contactPerson || '',
       phone: phone || '',
-      website: website || ''
+      website: website || '',
+      emailVerified: false,
+      phoneVerified: false,
+      kycStatus: 'pending',
+      accountActive: false
     });
-
-    await company.save();
 
     // Store verification record
     otpStorage.push({
