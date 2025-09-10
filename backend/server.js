@@ -617,6 +617,20 @@ app.post('/api/auth/reset-password', async (req, res) => {
   }
 });
 
+// Admin: Clear all data (for development)
+app.post('/api/admin/clear-all', (req, res) => {
+  const { adminKey } = req.body;
+  if (adminKey !== 'upflyover2025') {
+    return res.status(403).json({ error: 'Invalid admin key' });
+  }
+  
+  companies.length = 0;
+  kycDocuments.length = 0;
+  otpStorage.length = 0;
+  
+  res.json({ message: 'All data cleared successfully' });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
