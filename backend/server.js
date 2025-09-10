@@ -295,13 +295,10 @@ app.post('/api/auth/verify-email-otp', async (req, res) => {
     }
 
     // Find and update company
-    const company = companies.find(c => c.id === companyId);
+    const company = await DB.updateCompany(companyId, { emailVerified: true });
     if (!company) {
       return res.status(400).json({ error: 'Company not found' });
     }
-
-    company.emailVerified = true;
-    saveData();
 
     res.json({
       message: 'Email verified successfully',
@@ -337,13 +334,10 @@ app.post('/api/auth/verify-phone-otp', async (req, res) => {
     }
 
     // Find and update company
-    const company = companies.find(c => c.id === companyId);
+    const company = await DB.updateCompany(companyId, { phoneVerified: true });
     if (!company) {
       return res.status(400).json({ error: 'Company not found' });
     }
-
-    company.phoneVerified = true;
-    saveData();
 
     res.json({
       message: 'Phone verified successfully',
@@ -362,7 +356,7 @@ app.post('/api/auth/complete-verification', async (req, res) => {
     const { companyId } = req.body;
 
     // Find company
-    const company = companies.find(c => c.id === companyId);
+    const company = await DB.findCompany(useDatabase ? { _id: companyId } : { id: companyId });
     if (!company) {
       return res.status(400).json({ error: 'Company not found' });
     }
@@ -404,7 +398,7 @@ app.post('/api/auth/resend-otp', async (req, res) => {
     const { companyId, type } = req.body; // type: 'email' or 'phone'
 
     // Find company
-    const company = companies.find(c => c.id === companyId);
+    const company = await DB.findCompany(useDatabase ? { _id: companyId } : { id: companyId });
     if (!company) {
       return res.status(400).json({ error: 'Company not found' });
     }
@@ -440,7 +434,7 @@ app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
 
     // Find company
-    const company = companies.find(c => c.email === email);
+    const company = await DB.findCompany({ email });
     if (!company) {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
@@ -492,8 +486,8 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // Get profile endpoint
-app.get('/api/auth/profile', authenticateToken, (req, res) => {
-  const company = companies.find(c => c.id === req.company.id);
+app.get('/api/auth/profile', authenticateToken, async (req, res) => {
+  const company = await DB.findCompany(useDatabase ? { _id: req.company.id } : { id: req.company.id });
   if (!company) {
     return res.status(404).json({ error: 'Company not found' });
   }
