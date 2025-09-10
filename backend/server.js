@@ -823,49 +823,26 @@ app.post('/api/admin/clear-all', (req, res) => {
 
 // Requirements endpoints
 
-// Get all requirements with smart matching
+// Get all requirements (simplified)
 app.get('/api/requirements', authenticateToken, async (req, res) => {
   try {
-    const currentCompany = companies.find(c => c.id === req.company.id);
-    const currentCompanyServices = currentCompany?.services || [];
-    
     const allRequirements = requirements.map(req => {
       const posterCompany = companies.find(c => c.id === req.companyId);
-      
-      // Calculate match score based on company services vs requirement category
-      let matchScore = 20; // Default score
-      if (currentCompanyServices && currentCompanyServices.length > 0) {
-        const hasMatchingService = currentCompanyServices.some(service => {
-          if (!service || !req.category) return false;
-          const serviceCategory = (service.category || '').toLowerCase();
-          const serviceTitle = (service.title || '').toLowerCase();
-          const reqCategory = req.category.toLowerCase();
-          
-          return serviceCategory === reqCategory ||
-                 serviceTitle.includes(reqCategory) ||
-                 reqCategory.includes(serviceCategory);
-        });
-        matchScore = hasMatchingService ? 90 : 20;
-      }
-      
       return {
         ...req,
         companyName: posterCompany?.name || 'Anonymous',
-        matchScore,
-        isRecommended: matchScore >= 70
+        isRecommended: false // Will add smart matching later
       };
     });
     
-    // Sort by match score (recommended first), then by date
+    // Sort by date (newest first)
     const sortedRequirements = allRequirements.sort((a, b) => {
-      if (a.matchScore !== b.matchScore) {
-        return b.matchScore - a.matchScore;
-      }
       return new Date(b.createdAt) - new Date(a.createdAt);
     });
     
     res.json({ requirements: sortedRequirements });
   } catch (error) {
+    console.error('Error loading requirements:', error);
     res.status(500).json({ error: 'Failed to load requirements' });
   }
 });
@@ -888,57 +865,39 @@ app.get('/api/requirements/my', authenticateToken, async (req, res) => {
   }
 });
 
-// Post new requirement with file uploads
-app.post('/api/requirements', authenticateToken, (req, res) => {
-  const uploadHandler = upload.array('attachments', 5); // Allow up to 5 files
-  
-  uploadHandler(req, res, async (err) => {
-    if (err) {
-      console.error('File upload error:', err);
-      return res.status(400).json({ error: 'File upload failed: ' + err.message });
+// Post new requirement (simplified)
+app.post('/api/requirements', authenticateToken, async (req, res) => {
+  try {
+    const { title, description, category, budget, timeline, location, requirements: reqText } = req.body;
+    const companyId = req.company.id;
+    
+    if (!title || !description || !category) {
+      return res.status(400).json({ error: 'Title, description, and category are required' });
     }
     
-    try {
-      const { title, description, category, budget, timeline, location, requirements: reqText } = req.body;
-      const companyId = req.company.id;
-      
-      if (!title || !description || !category) {
-        return res.status(400).json({ error: 'Title, description, and category are required' });
-      }
-      
-      // Process uploaded files
-      const attachments = (req.files && req.files.length > 0) ? req.files.map(file => ({
-        filename: file.filename,
-        originalName: file.originalname,
-        size: file.size,
-        mimetype: file.mimetype,
-        uploadedAt: new Date()
-      })) : [];
-      
-      const requirement = {
-        id: uuidv4(),
-        companyId,
-        title,
-        description,
-        category,
-        budget: budget || '',
-        timeline: timeline || '',
-        location: location || '',
-        requirements: reqText || '',
-        attachments,
-        status: 'open',
-        createdAt: new Date(),
-        applications: 0
-      };
-      
-      requirements.push(requirement);
-      
-      res.json({ success: true, requirement });
-    } catch (error) {
-      console.error('Error posting requirement:', error);
-      res.status(500).json({ error: 'Failed to post requirement' });
-    }
-  });
+    const requirement = {
+      id: uuidv4(),
+      companyId,
+      title,
+      description,
+      category,
+      budget: budget || '',
+      timeline: timeline || '',
+      location: location || '',
+      requirements: reqText || '',
+      attachments: [], // Will add file upload later
+      status: 'open',
+      createdAt: new Date(),
+      applications: 0
+    };
+    
+    requirements.push(requirement);
+    
+    res.json({ success: true, requirement });
+  } catch (error) {
+    console.error('Error posting requirement:', error);
+    res.status(500).json({ error: 'Failed to post requirement' });
+  }
 });
 
 // Apply to requirement

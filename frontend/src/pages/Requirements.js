@@ -109,22 +109,10 @@ const Requirements = () => {
     try {
       setLoading(true);
       
-      const formData = new FormData();
-      
-      // Add text fields
-      Object.keys(newRequirement).forEach(key => {
-        formData.append(key, newRequirement[key]);
-      });
-      
-      // Add files
-      attachments.forEach(file => {
-        formData.append('attachments', file);
-      });
-      
-      const response = await axios.post('/api/requirements', formData, {
+      const response = await axios.post('/api/requirements', newRequirement, {
         headers: { 
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'application/json'
         }
       });
 
@@ -363,26 +351,7 @@ const Requirements = () => {
                         )}
                       </Stack>
                       
-                      {/* Attachments */}
-                      {req.attachments && req.attachments.length > 0 && (
-                        <Box sx={{ mb: 2 }}>
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            📎 Attachments ({req.attachments.length}):
-                          </Typography>
-                          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                            {req.attachments.map((att, index) => (
-                              <Chip
-                                key={index}
-                                label={att.originalName || `File ${index + 1}`}
-                                size="small"
-                                variant="outlined"
-                                onClick={() => downloadAttachment(req.id, att.filename, att.originalName)}
-                                sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
-                              />
-                            ))}
-                          </Stack>
-                        </Box>
-                      )}
+                      {/* File attachments will be added later */}
                       
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                         <Typography variant="body2" color="text.secondary">
@@ -589,41 +558,7 @@ const Requirements = () => {
               />
             </Grid>
             
-            {/* File Upload Section */}
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" gutterBottom>
-                Attachments (Optional)
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Upload PDFs, documents, images, or zip files to provide more details about your requirement.
-              </Typography>
-              
-              <input
-                type="file"
-                multiple
-                accept=".pdf,.doc,.docx,.zip,.rar,.jpg,.jpeg,.png,.txt"
-                onChange={handleFileChange}
-                style={{ marginBottom: '16px' }}
-              />
-              
-              {attachments.length > 0 && (
-                <Box>
-                  <Typography variant="body2" sx={{ mb: 1 }}>Selected files:</Typography>
-                  <Stack spacing={1}>
-                    {attachments.map((file, index) => (
-                      <Box key={index} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Typography variant="body2">
-                          {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                        </Typography>
-                        <IconButton size="small" onClick={() => removeAttachment(index)}>
-                          <Delete fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    ))}
-                  </Stack>
-                </Box>
-              )}
-            </Grid>
+            {/* File attachments will be added in next update */}
           </Grid>
         </DialogContent>
         <DialogActions>
