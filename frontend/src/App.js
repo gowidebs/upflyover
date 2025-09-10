@@ -27,6 +27,7 @@ import Terms from './pages/Terms';
 import Cookies from './pages/Cookies';
 import ApiDocs from './pages/ApiDocs';
 import VerifyEmail from './pages/VerifyEmail';
+import VerifyOTP from './pages/VerifyOTP';
 import KYC from './pages/KYC';
 import ForgotPassword from './pages/ForgotPassword';
 import { AuthProvider } from './contexts/AuthContext';
@@ -91,6 +92,7 @@ function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/verify-email" element={<VerifyEmail />} />
+              <Route path="/verify-otp" element={<VerifyOTP />} />
               <Route path="/kyc" element={<KYC />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/requirements" element={<Requirements />} />

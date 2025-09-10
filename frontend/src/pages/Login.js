@@ -42,7 +42,12 @@ const Login = () => {
       toast.success('Login successful!');
       navigate('/dashboard');
     } else {
-      setError(result.error);
+      if (result.requiresVerification && result.companyId) {
+        toast.info('Please complete your account verification.');
+        navigate('/verify-otp', { state: { companyId: result.companyId } });
+      } else {
+        setError(result.error);
+      }
     }
     
     setLoading(false);

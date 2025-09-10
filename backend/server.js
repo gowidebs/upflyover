@@ -68,6 +68,7 @@ const upload = multer({
 const companies = [];
 const verificationTokens = [];
 const kycDocuments = [];
+const otpStorage = []; // Store OTPs temporarily
 
 // Auth middleware
 const authenticateToken = (req, res, next) => {
@@ -87,6 +88,18 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+// Generate OTP
+const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+// Send SMS OTP (mock implementation - replace with real SMS service)
+const sendSMSOTP = async (phone, otp) => {
+  console.log(`SMS OTP for ${phone}: ${otp}`);
+  // In production, integrate with SMS service like Twilio, AWS SNS, etc.
+  return true;
+};
+
 // Register endpoint
 app.post('/api/auth/register', async (req, res) => {
   try {
@@ -101,10 +114,7 @@ app.post('/api/auth/register', async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Generate verification token
-    const verificationToken = uuidv4();
-
-    // Create company
+    // Create company (not verified yet)
     const company = {
       id: uuidv4(),
       name,
@@ -118,7 +128,8 @@ app.post('/api/auth/register', async (req, res) => {
       website: website || '',
       createdAt: new Date(),
       emailVerified: false,
-      kycStatus: 'pending', // pending, submitted, approved, rejected
+      phoneVerified: false,
+      kycStatus: 'pending',
       kycSubmittedAt: null,
       profileComplete: false,
       twoFactorEnabled: false
@@ -126,30 +137,30 @@ app.post('/api/auth/register', async (req, res) => {
 
     companies.push(company);
 
-    // Store verification token
-    verificationTokens.push({
-      token: verificationToken,
+    // Generate OTPs for email and phone
+    const emailOTP = generateOTP();
+    const phoneOTP = generateOTP();
+
+    // Store OTPs
+    otpStorage.push({
       companyId: company.id,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+      emailOTP,
+      phoneOTP,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
     });
 
-    // Auto-verify for testing (disable email requirement)
-    company.emailVerified = true;
-
-    // Generate JWT token for immediate login
-    const token = jwt.sign(
-      { id: company.id, email: company.email },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-
-    // Return company data without password
-    const { password: _, ...companyData } = company;
+    // Send OTPs
+    try {
+      await sendVerificationEmail(email, emailOTP);
+      await sendSMSOTP(phone, phoneOTP);
+    } catch (error) {
+      console.error('Error sending OTPs:', error);
+    }
 
     res.status(201).json({
-      message: 'Company registered successfully!',
-      token,
-      company: companyData
+      message: 'Registration successful! Please verify your email and phone number.',
+      companyId: company.id,
+      requiresVerification: true
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -157,36 +168,110 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// Email verification endpoint
-app.post('/api/auth/verify-email', (req, res) => {
+// Verify email OTP
+app.post('/api/auth/verify-email-otp', (req, res) => {
   try {
-    const { token } = req.body;
+    const { companyId, otp } = req.body;
 
-    // Find verification token
-    const verificationRecord = verificationTokens.find(vt => vt.token === token);
-    if (!verificationRecord) {
-      return res.status(400).json({ error: 'Invalid verification token' });
+    // Find OTP record
+    const otpRecord = otpStorage.find(o => o.companyId === companyId);
+    if (!otpRecord) {
+      return res.status(400).json({ error: 'OTP not found or expired' });
     }
 
-    // Check if token expired
-    if (new Date() > verificationRecord.expiresAt) {
-      return res.status(400).json({ error: 'Verification token expired' });
+    // Check if OTP expired
+    if (new Date() > otpRecord.expiresAt) {
+      return res.status(400).json({ error: 'OTP expired' });
+    }
+
+    // Verify email OTP
+    if (otpRecord.emailOTP !== otp) {
+      return res.status(400).json({ error: 'Invalid email OTP' });
     }
 
     // Find and update company
-    const company = companies.find(c => c.id === verificationRecord.companyId);
+    const company = companies.find(c => c.id === companyId);
     if (!company) {
       return res.status(400).json({ error: 'Company not found' });
     }
 
     company.emailVerified = true;
 
-    // Remove used token
-    const tokenIndex = verificationTokens.findIndex(vt => vt.token === token);
-    verificationTokens.splice(tokenIndex, 1);
+    res.json({
+      message: 'Email verified successfully',
+      emailVerified: true,
+      phoneVerified: company.phoneVerified
+    });
+  } catch (error) {
+    console.error('Email OTP verification error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Verify phone OTP
+app.post('/api/auth/verify-phone-otp', (req, res) => {
+  try {
+    const { companyId, otp } = req.body;
+
+    // Find OTP record
+    const otpRecord = otpStorage.find(o => o.companyId === companyId);
+    if (!otpRecord) {
+      return res.status(400).json({ error: 'OTP not found or expired' });
+    }
+
+    // Check if OTP expired
+    if (new Date() > otpRecord.expiresAt) {
+      return res.status(400).json({ error: 'OTP expired' });
+    }
+
+    // Verify phone OTP
+    if (otpRecord.phoneOTP !== otp) {
+      return res.status(400).json({ error: 'Invalid phone OTP' });
+    }
+
+    // Find and update company
+    const company = companies.find(c => c.id === companyId);
+    if (!company) {
+      return res.status(400).json({ error: 'Company not found' });
+    }
+
+    company.phoneVerified = true;
+
+    res.json({
+      message: 'Phone verified successfully',
+      emailVerified: company.emailVerified,
+      phoneVerified: true
+    });
+  } catch (error) {
+    console.error('Phone OTP verification error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Complete verification and login
+app.post('/api/auth/complete-verification', (req, res) => {
+  try {
+    const { companyId } = req.body;
+
+    // Find company
+    const company = companies.find(c => c.id === companyId);
+    if (!company) {
+      return res.status(400).json({ error: 'Company not found' });
+    }
+
+    // Check if both email and phone are verified
+    if (!company.emailVerified || !company.phoneVerified) {
+      return res.status(400).json({ error: 'Please verify both email and phone number' });
+    }
+
+    // Remove OTP record
+    const otpIndex = otpStorage.findIndex(o => o.companyId === companyId);
+    if (otpIndex !== -1) {
+      otpStorage.splice(otpIndex, 1);
+    }
 
     // Generate JWT token for login
-    const jwtToken = jwt.sign(
+    const token = jwt.sign(
       { id: company.id, email: company.email },
       JWT_SECRET,
       { expiresIn: '24h' }
@@ -195,12 +280,61 @@ app.post('/api/auth/verify-email', (req, res) => {
     const { password: _, ...companyData } = company;
 
     res.json({
-      message: 'Email verified successfully',
-      token: jwtToken,
+      message: 'Verification completed successfully',
+      token,
       company: companyData
     });
   } catch (error) {
-    console.error('Email verification error:', error);
+    console.error('Complete verification error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Resend OTP
+app.post('/api/auth/resend-otp', async (req, res) => {
+  try {
+    const { companyId, type } = req.body; // type: 'email' or 'phone'
+
+    // Find company
+    const company = companies.find(c => c.id === companyId);
+    if (!company) {
+      return res.status(400).json({ error: 'Company not found' });
+    }
+
+    // Find or create OTP record
+    let otpRecord = otpStorage.find(o => o.companyId === companyId);
+    if (!otpRecord) {
+      const emailOTP = generateOTP();
+      const phoneOTP = generateOTP();
+      otpRecord = {
+        companyId,
+        emailOTP,
+        phoneOTP,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+      };
+      otpStorage.push(otpRecord);
+    } else {
+      // Update expiry
+      otpRecord.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      if (type === 'email') {
+        otpRecord.emailOTP = generateOTP();
+      } else {
+        otpRecord.phoneOTP = generateOTP();
+      }
+    }
+
+    // Send OTP
+    if (type === 'email') {
+      await sendVerificationEmail(company.email, otpRecord.emailOTP);
+    } else {
+      await sendSMSOTP(company.phone, otpRecord.phoneOTP);
+    }
+
+    res.json({
+      message: `${type === 'email' ? 'Email' : 'Phone'} OTP sent successfully`
+    });
+  } catch (error) {
+    console.error('Resend OTP error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -222,8 +356,14 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
-    // Auto-verify for testing
-    company.emailVerified = true;
+    // Check if email and phone are verified
+    if (!company.emailVerified || !company.phoneVerified) {
+      return res.status(400).json({ 
+        error: 'Please verify your email and phone number before logging in',
+        requiresVerification: true,
+        companyId: company.id
+      });
+    }
 
     // Generate JWT token
     const token = jwt.sign(

@@ -74,8 +74,13 @@ const Register = () => {
     const result = await register(registrationData);
     
     if (result.success) {
-      toast.success('Registration successful! Welcome to Upflyover!');
-      navigate('/dashboard');
+      if (result.requiresVerification) {
+        toast.success('Registration successful! Please verify your email and phone number.');
+        navigate('/verify-otp', { state: { companyId: result.companyId } });
+      } else {
+        toast.success('Registration successful! Welcome to Upflyover!');
+        navigate('/dashboard');
+      }
     } else {
       setError(result.error);
     }
@@ -138,12 +143,15 @@ const Register = () => {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
+                  required
                   fullWidth
                   id="phone"
                   label="Phone Number"
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
+                  placeholder="+1234567890"
+                  helperText="Include country code (e.g., +971501234567)"
                 />
               </Grid>
               <Grid item xs={12} sm={6}>

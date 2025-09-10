@@ -9,24 +9,25 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-const sendVerificationEmail = async (email, verificationToken, companyName) => {
-  const verificationUrl = `http://localhost:3000/verify-email?token=${verificationToken}`;
-  
+const sendVerificationEmail = async (email, otp, companyName) => {
   const mailOptions = {
     from: process.env.EMAIL_USER || 'noreply@upflyover.com',
     to: email,
-    subject: 'Verify Your Upflyover Account',
+    subject: 'Your Upflyover Verification Code',
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: rgb(30, 86, 86);">Welcome to Upflyover, ${companyName}!</h2>
-        <p>Thank you for registering with Upflyover. To complete your registration, please verify your email address.</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: rgb(30, 86, 86); text-align: center;">Email Verification</h2>
+        <p>Hello,</p>
+        <p>Thank you for registering with Upflyover. Please use the following verification code to verify your email address:</p>
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${verificationUrl}" 
-             style="background-color: rgb(30, 86, 86); color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
-            Verify Email Address
-          </a>
+          <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; display: inline-block;">
+            <h1 style="color: rgb(30, 86, 86); margin: 0; font-size: 32px; letter-spacing: 5px;">${otp}</h1>
+          </div>
         </div>
-        <p>This link will expire in 24 hours.</p>
+        <p>This verification code will expire in 10 minutes.</p>
+        <p>If you didn't request this verification, please ignore this email.</p>
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="color: #666; font-size: 12px;">This is an automated message from Upflyover. Please do not reply to this email.</p>
       </div>
     `
   };
