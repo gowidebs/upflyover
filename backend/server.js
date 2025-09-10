@@ -30,7 +30,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // Middleware
 app.use(cors({
-  origin: ['https://upflyover.vercel.app', 'http://localhost:3000'],
+  origin: ['https://upflyover.vercel.app', 'https://gowidetest.click', 'https://www.gowidetest.click', 'http://localhost:3000'],
   credentials: true
 }));
 app.use(express.json());
