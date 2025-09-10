@@ -8,8 +8,6 @@ const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
 const { sendSMSOTP, sendEmailOTP, verifyOTP } = require('./utils/smsService');
-const Company = require('./models/Company');
-const KYC = require('./models/KYC');
 
 // Load environment variables
 require('dotenv').config();
@@ -74,8 +72,30 @@ const upload = multer({
   }
 });
 
-// Temporary OTP storage (in-memory is fine for OTPs)
-const otpStorage = []; // Store OTPs temporarily
+// In-memory storage with file backup
+let companies = [];
+let kycDocuments = [];
+const otpStorage = [];
+
+// Load data from file on startup
+try {
+  if (fs.existsSync('data.json')) {
+    const data = JSON.parse(fs.readFileSync('data.json', 'utf8'));
+    companies = data.companies || [];
+    kycDocuments = data.kycDocuments || [];
+  }
+} catch (error) {
+  console.log('No existing data file, starting fresh');
+}
+
+// Save data to file
+const saveData = () => {
+  try {
+    fs.writeFileSync('data.json', JSON.stringify({ companies, kycDocuments }, null, 2));
+  } catch (error) {
+    console.error('Failed to save data:', error);
+  }
+};
 
 // Auth middleware
 const authenticateToken = (req, res, next) => {
@@ -130,7 +150,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     // Store verification record
     otpStorage.push({
-      companyId: company._id.toString(),
+      companyId: company.id,
       email: email,
       phone: phone,
       emailVerified: false,
@@ -154,7 +174,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     res.status(201).json({
       message: 'Registration successful! Please verify your email and phone number.',
-      companyId: company._id.toString(),
+      companyId: company.id,
       requiresVerification: true
     });
   } catch (error) {
@@ -186,13 +206,13 @@ app.post('/api/auth/verify-email-otp', async (req, res) => {
     }
 
     // Find and update company
-    const company = await Company.findById(companyId);
+    const company = companies.find(c => c.id === companyId);
     if (!company) {
       return res.status(400).json({ error: 'Company not found' });
     }
 
     company.emailVerified = true;
-    await company.save();
+    saveData();
 
     res.json({
       message: 'Email verified successfully',
@@ -228,13 +248,13 @@ app.post('/api/auth/verify-phone-otp', async (req, res) => {
     }
 
     // Find and update company
-    const company = await Company.findById(companyId);
+    const company = companies.find(c => c.id === companyId);
     if (!company) {
       return res.status(400).json({ error: 'Company not found' });
     }
 
     company.phoneVerified = true;
-    await company.save();
+    saveData();
 
     res.json({
       message: 'Phone verified successfully',
@@ -331,7 +351,7 @@ app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
 
     // Find company
-    const company = await Company.findOne({ email });
+    const company = companies.find(c => c.email === email);
     if (!company) {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
@@ -358,7 +378,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: company._id, email: company.email },
+      { id: company.id, email: company.email },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -383,18 +403,14 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // Get profile endpoint
-app.get('/api/auth/profile', authenticateToken, async (req, res) => {
-  try {
-    const company = await Company.findById(req.company.id);
-    if (!company) {
-      return res.status(404).json({ error: 'Company not found' });
-    }
-
-    const { password: _, ...companyData } = company.toObject();
-    res.json({ company: companyData });
-  } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+app.get('/api/auth/profile', authenticateToken, (req, res) => {
+  const company = companies.find(c => c.id === req.company.id);
+  if (!company) {
+    return res.status(404).json({ error: 'Company not found' });
   }
+
+  const { password: _, ...companyData } = company;
+  res.json({ company: companyData });
 });
 
 // KYC document submission
