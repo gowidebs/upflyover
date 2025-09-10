@@ -305,17 +305,9 @@ app.post('/api/auth/register', async (req, res) => {
       expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
     });
 
-    // Send Email OTP only (SMS after KYC)
-    try {
-      const emailResult = await sendEmailOTP(email);
-      console.log(`Email OTP sent: ${emailResult.success}`);
-      
-      if (!emailResult.success) {
-        console.error('Email OTP sending failed:', emailResult);
-      }
-    } catch (error) {
-      console.error('Error sending email OTP:', error);
-    }
+    // Auto-verify email for now (no Twilio dependency)
+    company.emailVerified = true;
+    console.log(`Email auto-verified for: ${email}`);
 
     res.status(201).json({
       message: 'Registration successful! Please verify your email and phone number.',
@@ -417,10 +409,8 @@ app.post('/api/auth/complete-verification', async (req, res) => {
       return res.status(400).json({ error: 'Company not found' });
     }
 
-    // Check if email is verified (phone verification after KYC)
-    if (!company.emailVerified) {
-      return res.status(400).json({ error: 'Please verify your email address' });
-    }
+    // Email auto-verified during registration
+    // Phone verification happens after KYC approval
 
     // Remove OTP record
     const otpIndex = otpStorage.findIndex(o => o.companyId === companyId);
@@ -552,14 +542,8 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
-    // Check if email is verified (phone verification after KYC)
-    if (!company.emailVerified) {
-      return res.status(400).json({ 
-        error: 'Please verify your email address before logging in',
-        requiresVerification: true,
-        companyId: company.id
-      });
-    }
+    // Allow immediate login (email auto-verified)
+    // Additional verification through KYC process
 
     // Allow login but indicate KYC status
     const needsKyc = company.kycStatus === 'pending' || company.kycStatus === 'rejected';
