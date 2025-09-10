@@ -406,8 +406,8 @@ app.post('/api/kyc/submit', authenticateToken, (req, res) => {
   const uploadHandler = upload.fields([
     { name: 'businessLicense', maxCount: 1 },
     { name: 'taxCertificate', maxCount: 1 },
-    { name: 'bankStatement', maxCount: 1 },
-    { name: 'ownershipProof', maxCount: 1 }
+    { name: 'moa', maxCount: 1 },
+    { name: 'aoa', maxCount: 1 }
   ]);
 
   uploadHandler(req, res, (err) => {
@@ -420,7 +420,7 @@ app.post('/api/kyc/submit', authenticateToken, (req, res) => {
     }
 
     try {
-      const { businessRegistrationNumber, taxId, bankAccountNumber, description } = req.body;
+      const { businessRegistrationNumber, taxId, description } = req.body;
       const companyId = req.company.id;
 
       console.log('KYC submission data:', { companyId, businessRegistrationNumber, taxId, files: req.files });
@@ -448,13 +448,12 @@ app.post('/api/kyc/submit', authenticateToken, (req, res) => {
         companyId,
         businessRegistrationNumber,
         taxId,
-        bankAccountNumber: bankAccountNumber || '',
         description: description || '',
         documents: {
           businessLicense: req.files?.businessLicense?.[0]?.filename || null,
           taxCertificate: req.files?.taxCertificate?.[0]?.filename || null,
-          bankStatement: req.files?.bankStatement?.[0]?.filename || null,
-          ownershipProof: req.files?.ownershipProof?.[0]?.filename || null
+          moa: req.files?.moa?.[0]?.filename || null,
+          aoa: req.files?.aoa?.[0]?.filename || null
         },
         submittedAt: new Date(),
         status: 'submitted'

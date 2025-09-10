@@ -45,14 +45,13 @@ const KYC = () => {
   const [kycData, setKycData] = useState({
     businessRegistrationNumber: '',
     taxId: '',
-    bankAccountNumber: '',
     description: ''
   });
   const [files, setFiles] = useState({
     businessLicense: null,
     taxCertificate: null,
-    bankStatement: null,
-    ownershipProof: null
+    moa: null,
+    aoa: null
   });
   const [kycStatus, setKycStatus] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -76,18 +75,18 @@ const KYC = () => {
       required: true
     },
     {
-      key: 'bankStatement',
-      title: 'Bank Statement',
-      description: 'Recent bank statement (last 3 months)',
+      key: 'moa',
+      title: 'Memorandum of Association (MOA)',
+      description: 'Company memorandum of association',
       icon: <Description />,
       required: true
     },
     {
-      key: 'ownershipProof',
-      title: 'Ownership Proof',
-      description: 'Proof of company ownership',
+      key: 'aoa',
+      title: 'Articles of Association (AOA)',
+      description: 'Company articles of association',
       icon: <VerifiedUser />,
-      required: false
+      required: true
     }
   ];
 
@@ -206,15 +205,7 @@ const KYC = () => {
                 helperText="Enter your tax identification number"
               />
             </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Bank Account Number"
-                value={kycData.bankAccountNumber}
-                onChange={(e) => handleInputChange('bankAccountNumber', e.target.value)}
-                helperText="Primary business bank account number"
-              />
-            </Grid>
+
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -323,12 +314,7 @@ const KYC = () => {
                         secondary={kycData.taxId}
                       />
                     </ListItem>
-                    <ListItem>
-                      <ListItemText
-                        primary="Bank Account"
-                        secondary={kycData.bankAccountNumber || 'Not provided'}
-                      />
-                    </ListItem>
+
                   </List>
                 </CardContent>
               </Card>
