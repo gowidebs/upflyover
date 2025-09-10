@@ -7,7 +7,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
-const { sendVerificationEmail } = require('./utils/emailService');
+const { sendSMSOTP, sendEmailOTP, verifyOTP } = require('./utils/smsService');
 
 // Load environment variables
 require('dotenv').config();
@@ -88,17 +88,9 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// Generate OTP
-const generateOTP = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-};
 
-// Send SMS OTP (mock implementation - replace with real SMS service)
-const sendSMSOTP = async (phone, otp) => {
-  console.log(`SMS OTP for ${phone}: ${otp}`);
-  // In production, integrate with SMS service like Twilio, AWS SNS, etc.
-  return true;
-};
+
+
 
 // Register endpoint
 app.post('/api/auth/register', async (req, res) => {
@@ -137,22 +129,26 @@ app.post('/api/auth/register', async (req, res) => {
 
     companies.push(company);
 
-    // Generate OTPs for email and phone
-    const emailOTP = generateOTP();
-    const phoneOTP = generateOTP();
-
-    // Store OTPs
+    // Store verification record
     otpStorage.push({
       companyId: company.id,
-      emailOTP,
-      phoneOTP,
+      email: email,
+      phone: phone,
+      emailVerified: false,
+      phoneVerified: false,
       expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
     });
 
-    // Send OTPs
+    // Send OTPs via Twilio Verify
     try {
-      await sendVerificationEmail(email, emailOTP);
-      await sendSMSOTP(phone, phoneOTP);
+      const emailResult = await sendEmailOTP(email);
+      const smsResult = await sendSMSOTP(phone);
+      
+      console.log(`OTPs sent - Email: ${emailResult.success}, SMS: ${smsResult.success}`);
+      
+      if (!emailResult.success || !smsResult.success) {
+        console.error('OTP sending failed:', { emailResult, smsResult });
+      }
     } catch (error) {
       console.error('Error sending OTPs:', error);
     }
@@ -184,8 +180,9 @@ app.post('/api/auth/verify-email-otp', (req, res) => {
       return res.status(400).json({ error: 'OTP expired' });
     }
 
-    // Verify email OTP
-    if (otpRecord.emailOTP !== otp) {
+    // Verify email OTP with Twilio
+    const emailVerifyResult = await verifyOTP(otpRecord.email, otp);
+    if (!emailVerifyResult.success) {
       return res.status(400).json({ error: 'Invalid email OTP' });
     }
 
@@ -224,8 +221,9 @@ app.post('/api/auth/verify-phone-otp', (req, res) => {
       return res.status(400).json({ error: 'OTP expired' });
     }
 
-    // Verify phone OTP
-    if (otpRecord.phoneOTP !== otp) {
+    // Verify phone OTP with Twilio
+    const phoneVerifyResult = await verifyOTP(otpRecord.phone, otp);
+    if (!phoneVerifyResult.success) {
       return res.status(400).json({ error: 'Invalid phone OTP' });
     }
 
@@ -301,33 +299,20 @@ app.post('/api/auth/resend-otp', async (req, res) => {
       return res.status(400).json({ error: 'Company not found' });
     }
 
-    // Find or create OTP record
+    // Find OTP record
     let otpRecord = otpStorage.find(o => o.companyId === companyId);
     if (!otpRecord) {
-      const emailOTP = generateOTP();
-      const phoneOTP = generateOTP();
-      otpRecord = {
-        companyId,
-        emailOTP,
-        phoneOTP,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000)
-      };
-      otpStorage.push(otpRecord);
-    } else {
-      // Update expiry
-      otpRecord.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-      if (type === 'email') {
-        otpRecord.emailOTP = generateOTP();
-      } else {
-        otpRecord.phoneOTP = generateOTP();
-      }
+      return res.status(400).json({ error: 'No verification session found' });
     }
 
-    // Send OTP
+    // Update expiry
+    otpRecord.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    // Send OTP via Twilio Verify
     if (type === 'email') {
-      await sendVerificationEmail(company.email, otpRecord.emailOTP);
+      await sendEmailOTP(company.email);
     } else {
-      await sendSMSOTP(company.phone, otpRecord.phoneOTP);
+      await sendSMSOTP(company.phone);
     }
 
     res.json({
