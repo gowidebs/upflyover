@@ -37,8 +37,13 @@ app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
 // Create uploads directory
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
+try {
+  if (!fs.existsSync('uploads')) {
+    fs.mkdirSync('uploads', { recursive: true });
+    console.log('Created uploads directory');
+  }
+} catch (error) {
+  console.error('Failed to create uploads directory:', error);
 }
 
 // Multer configuration for file uploads
@@ -408,6 +413,9 @@ app.post('/api/kyc/submit', authenticateToken, (req, res) => {
   uploadHandler(req, res, (err) => {
     if (err) {
       console.error('File upload error:', err);
+      if (err.code === 'ENOENT') {
+        return res.status(500).json({ error: 'Upload directory not accessible' });
+      }
       return res.status(400).json({ error: err.message || 'File upload failed' });
     }
 
@@ -426,6 +434,12 @@ app.post('/api/kyc/submit', authenticateToken, (req, res) => {
       // Validate required fields
       if (!businessRegistrationNumber || !taxId) {
         return res.status(400).json({ error: 'Business registration number and tax ID are required' });
+      }
+
+      // Check if at least one document is uploaded
+      const hasDocuments = req.files && Object.keys(req.files).length > 0;
+      if (!hasDocuments) {
+        return res.status(400).json({ error: 'At least one document must be uploaded' });
       }
 
       // Create KYC record
