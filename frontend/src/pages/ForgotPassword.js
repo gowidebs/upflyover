@@ -23,20 +23,24 @@ const ForgotPassword = () => {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5002/api/auth/reset-password', {
+      const apiUrl = process.env.REACT_APP_API_URL || 'https://upflyover-production.up.railway.app/api';
+      const response = await fetch(`${apiUrl}/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
       });
       
+      const data = await response.json();
+      
       if (response.ok) {
         setSent(true);
-        toast.success('Password reset to "newpassword123"');
+        toast.success('Password reset link sent! Check the console for the link (in production, this will be emailed).');
+        console.log('Reset Link:', data.resetLink); // For testing
       } else {
-        toast.error('Email not found');
+        toast.error(data.error || 'Email not found');
       }
     } catch (error) {
-      toast.error('Reset failed');
+      toast.error('Reset failed. Please try again.');
     }
     
     setLoading(false);
@@ -55,7 +59,7 @@ const ForgotPassword = () => {
 
           {sent ? (
             <Alert severity="success" sx={{ width: '100%', mb: 2 }}>
-              For testing purposes: Your password has been reset to "newpassword123". You can now login with this password.
+              Password reset link sent! For testing, check the browser console for the reset link. In production, this will be sent to your email.
             </Alert>
           ) : (
             <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>

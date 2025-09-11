@@ -980,23 +980,81 @@ app.get('/api/admin/kyc/document/:filename', (req, res) => {
   }
 });
 
-// Password reset endpoint
+// Password reset/setup endpoint
 app.post('/api/auth/reset-password', async (req, res) => {
   try {
     const { email } = req.body;
     
-    const company = companies.find(c => c.email === email);
-    if (!company) {
-      return res.status(404).json({ error: 'Company not found' });
+    // Find user (company or individual)
+    let user = companies.find(c => c.email === email);
+    let userType = 'company';
+    
+    if (!user) {
+      user = individuals.find(i => i.email === email);
+      userType = 'individual';
     }
     
-    // Reset to test password
-    const newPassword = 'newpassword123';
-    company.password = await bcrypt.hash(newPassword, 10);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
     
-    res.json({ message: 'Password reset successful' });
+    // Generate a secure reset token
+    const resetToken = uuidv4();
+    const resetExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    
+    // Store reset token (in production, use database)
+    user.resetToken = resetToken;
+    user.resetExpiry = resetExpiry;
+    
+    // In production, send email with reset link
+    // For now, return the token for testing
+    const resetLink = `https://upflyover.vercel.app/reset-password?token=${resetToken}&email=${email}`;
+    
+    res.json({ 
+      message: 'Password reset link sent to your email',
+      resetLink, // Remove this in production
+      userType
+    });
   } catch (error) {
     res.status(500).json({ error: 'Password reset failed' });
+  }
+});
+
+// Set new password with token
+app.post('/api/auth/set-password', async (req, res) => {
+  try {
+    const { email, token, newPassword } = req.body;
+    
+    if (!email || !token || !newPassword) {
+      return res.status(400).json({ error: 'Email, token, and new password are required' });
+    }
+    
+    // Find user
+    let user = companies.find(c => c.email === email);
+    if (!user) {
+      user = individuals.find(i => i.email === email);
+    }
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Verify token and expiry
+    if (user.resetToken !== token || new Date() > user.resetExpiry) {
+      return res.status(400).json({ error: 'Invalid or expired reset token' });
+    }
+    
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    
+    // Clear reset token
+    delete user.resetToken;
+    delete user.resetExpiry;
+    
+    res.json({ message: 'Password set successfully. You can now login with your email and password.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to set password' });
   }
 });
 

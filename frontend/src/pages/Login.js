@@ -7,11 +7,15 @@ import {
   Typography,
   Box,
   Link,
-  Alert
+  Alert,
+  Divider
 } from '@mui/material';
+import { Google } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-toastify';
+import { GoogleLogin } from '@react-oauth/google';
+import { jwtDecode } from 'jwt-decode';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -29,6 +33,28 @@ const Login = () => {
       [e.target.name]: e.target.value
     });
     setError('');
+  };
+
+  const handleGoogleLogin = async (credentialResponse) => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const decoded = jwtDecode(credentialResponse.credential);
+      
+      // Try to login with Google credentials
+      const result = await login(decoded.email, 'google-oauth-' + decoded.sub);
+      
+      if (result.success) {
+        toast.success('Google login successful!');
+        navigate('/dashboard');
+      } else {
+        setError('Google account not found. Please sign up first.');
+      }
+    } catch (error) {
+      setError('Google login failed. Please try email/password.');
+    }
+    setLoading(false);
   };
 
   const handleSubmit = async (e) => {
@@ -69,6 +95,27 @@ const Login = () => {
               {error}
             </Alert>
           )}
+
+          {/* Google OAuth Login */}
+          {process.env.REACT_APP_GOOGLE_CLIENT_ID && process.env.REACT_APP_GOOGLE_CLIENT_ID !== 'your-google-client-id-here' ? (
+            <Box sx={{ width: '100%', mb: 3 }}>
+              <GoogleLogin
+                onSuccess={handleGoogleLogin}
+                onError={() => toast.error('Google login failed')}
+                useOneTap={false}
+                theme="outline"
+                size="large"
+                width="100%"
+                text="signin_with"
+                shape="rectangular"
+              />
+              <Divider sx={{ my: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  or
+                </Typography>
+              </Divider>
+            </Box>
+          ) : null}
 
           <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
             <TextField

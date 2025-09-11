@@ -31,6 +31,7 @@ import VerifyEmail from './pages/VerifyEmail';
 import VerifyOTP from './pages/VerifyOTP';
 import KYC from './pages/KYC';
 import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import AdminLogin from './pages/AdminLogin';
 import AdminKYC from './pages/AdminKYC';
 import KYCPending from './pages/KYCPending';
@@ -109,6 +110,7 @@ function App() {
               <Route path="/user-type-selection" element={<UserTypeSelection />} />
               <Route path="/individual-verification" element={<IndividualVerification />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/verify-otp" element={<VerifyOTP />} />
               <Route path="/kyc" element={<KYC />} />
               <Route path="/kyc-pending" element={<KYCPending />} />
