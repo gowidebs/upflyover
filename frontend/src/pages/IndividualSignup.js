@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
+import AppleSignin from 'react-apple-signin-auth';
 
 const IndividualSignup = () => {
   const navigate = useNavigate();
@@ -135,9 +136,68 @@ const IndividualSignup = () => {
     setLoading(false);
   };
 
-  const handleAppleSignup = () => {
-    // Implement Apple OAuth
-    toast.info('Apple signup will be implemented soon');
+  const handleAppleSignup = async (response) => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const { authorization } = response;
+      const { id_token, code } = authorization;
+      
+      // Decode Apple ID token
+      const decoded = jwtDecode(id_token);
+      
+      // Register with Apple data
+      const apiUrl = process.env.REACT_APP_API_URL || 'https://upflyover-production.up.railway.app/api';
+      const apiResponse = await fetch(`${apiUrl}/auth/individual/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: decoded.email,
+          password: 'apple-oauth-' + decoded.sub,
+          fullName: response.user?.name?.firstName + ' ' + response.user?.name?.lastName || 'Apple User',
+          userType: 'individual',
+          provider: 'apple',
+          appleId: decoded.sub,
+          emailVerified: true
+        }),
+      });
+
+      const data = await apiResponse.json();
+
+      if (apiResponse.ok) {
+        if (data.isExistingUser) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          toast.success('Welcome back! Logged in successfully.');
+          navigate('/dashboard');
+        } else {
+          toast.success('Apple signup successful! Please select your user type.');
+          navigate('/user-type-selection', { 
+            state: { 
+              userId: data.userId, 
+              email: decoded.email,
+              userType: 'individual',
+              provider: 'apple'
+            } 
+          });
+        }
+      } else {
+        setError(data.error || 'Apple signup failed');
+      }
+    } catch (error) {
+      console.error('Apple signup error:', error);
+      setError('Apple signup failed. Please try email signup instead.');
+    }
+    setLoading(false);
+  };
+
+  const handleAppleError = (error) => {
+    console.error('Apple OAuth error:', error);
+    setError('Apple signup failed. Please try email signup instead.');
+    setLoading(false);
   };
 
   return (
@@ -185,16 +245,45 @@ const IndividualSignup = () => {
                 </Button>
               )}
               
-              <Button
-                fullWidth
-                variant="outlined"
-                size="large"
-                startIcon={<Apple />}
-                onClick={handleAppleSignup}
-                sx={{ mb: 2, py: 1.5, color: 'black', borderColor: 'black' }}
-              >
-                Continue with Apple
-              </Button>
+              {process.env.REACT_APP_APPLE_CLIENT_ID ? (
+                <AppleSignin
+                  authOptions={{
+                    clientId: process.env.REACT_APP_APPLE_CLIENT_ID,
+                    scope: 'name email',
+                    redirectURI: window.location.origin,
+                    state: 'individual-signup',
+                    nonce: 'nonce-' + Date.now(),
+                    usePopup: true
+                  }}
+                  onSuccess={handleAppleSignup}
+                  onError={handleAppleError}
+                  skipScript={false}
+                  render={(props) => (
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      size="large"
+                      startIcon={<Apple />}
+                      onClick={props.onClick}
+                      disabled={loading}
+                      sx={{ mb: 2, py: 1.5, color: 'black', borderColor: 'black' }}
+                    >
+                      Continue with Apple
+                    </Button>
+                  )}
+                />
+              ) : (
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  size="large"
+                  startIcon={<Apple />}
+                  onClick={() => toast.info('Apple Sign-In is being configured. Please use email signup for now.')}
+                  sx={{ mb: 2, py: 1.5, color: 'black', borderColor: 'black' }}
+                >
+                  Continue with Apple (Coming Soon)
+                </Button>
+              )}
 
               <Divider sx={{ my: 2 }}>
                 <Typography variant="body2" color="text.secondary">

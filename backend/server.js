@@ -318,7 +318,7 @@ const authenticateToken = (req, res, next) => {
 // Individual registration endpoint
 app.post('/api/auth/individual/register', async (req, res) => {
   try {
-    const { email, password, userType, provider, googleId, fullName, emailVerified } = req.body;
+    const { email, password, userType, provider, googleId, appleId, fullName, emailVerified } = req.body;
 
     // Validate required fields
     if (!email || !password) {
@@ -330,8 +330,8 @@ app.post('/api/auth/individual/register', async (req, res) => {
     const existingCompany = companies.find(c => c.email === email);
     
     if (existingIndividual || existingCompany) {
-      // For Google OAuth, if user exists, log them in instead
-      if (provider === 'google' && emailVerified) {
+      // For OAuth providers, if user exists, log them in instead
+      if ((provider === 'google' || provider === 'apple') && emailVerified) {
         const existingUser = existingIndividual || existingCompany;
         
         // Generate JWT token for login
@@ -373,6 +373,7 @@ app.post('/api/auth/individual/register', async (req, res) => {
       fullName: fullName || '',
       provider: provider || 'email',
       googleId: googleId || null,
+      appleId: appleId || null,
       emailVerified: emailVerified || false,
       phoneVerified: false,
       kycStatus: 'pending',
@@ -384,13 +385,13 @@ app.post('/api/auth/individual/register', async (req, res) => {
 
     individuals.push(individual);
 
-    // Skip email verification for Google OAuth users
-    if (provider === 'google' && emailVerified) {
+    // Skip email verification for OAuth users
+    if ((provider === 'google' || provider === 'apple') && emailVerified) {
       res.status(201).json({
-        message: 'Google registration successful! Please select your user type.',
+        message: `${provider === 'apple' ? 'Apple' : 'Google'} registration successful! Please select your user type.`,
         userId: individual.id,
         requiresVerification: false,
-        provider: 'google'
+        provider
       });
       return;
     }
