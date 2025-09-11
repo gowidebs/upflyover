@@ -14,6 +14,8 @@ import {
 import { Google, Apple, Email } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { GoogleLogin } from '@react-oauth/google';
+import { jwtDecode } from 'jwt-decode';
 
 const IndividualSignup = () => {
   const navigate = useNavigate();
@@ -65,9 +67,55 @@ const IndividualSignup = () => {
     setLoading(false);
   };
 
-  const handleGoogleSignup = () => {
-    // Implement Google OAuth
-    toast.info('Google signup will be implemented soon');
+  const handleGoogleSignup = async (credentialResponse) => {
+    try {
+      setLoading(true);
+      setError('');
+
+      // Decode the Google JWT token
+      const decoded = jwtDecode(credentialResponse.credential);
+      
+      // Register with Google data
+      const response = await fetch('/api/auth/individual/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: decoded.email,
+          password: 'google-oauth-' + decoded.sub, // Use Google ID as password
+          fullName: decoded.name,
+          userType: 'individual',
+          provider: 'google',
+          googleId: decoded.sub,
+          emailVerified: true // Google emails are pre-verified
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success('Google signup successful! Please select your user type.');
+        navigate('/user-type-selection', { 
+          state: { 
+            userId: data.userId, 
+            email: decoded.email,
+            userType: 'individual',
+            provider: 'google'
+          } 
+        });
+      } else {
+        setError(data.error || 'Google signup failed');
+      }
+    } catch (error) {
+      console.error('Google signup error:', error);
+      setError('Google signup failed. Please try again.');
+    }
+    setLoading(false);
+  };
+
+  const handleGoogleError = () => {
+    setError('Google signup was cancelled or failed');
   };
 
   const handleAppleSignup = () => {
@@ -94,16 +142,31 @@ const IndividualSignup = () => {
 
           {!showEmailForm ? (
             <Box sx={{ width: '100%' }}>
-              <Button
-                fullWidth
-                variant="outlined"
-                size="large"
-                startIcon={<Google />}
-                onClick={handleGoogleSignup}
-                sx={{ mb: 2, py: 1.5 }}
-              >
-                Continue with Google
-              </Button>
+              {process.env.REACT_APP_GOOGLE_CLIENT_ID && process.env.REACT_APP_GOOGLE_CLIENT_ID !== 'your-google-client-id-here' ? (
+                <Box sx={{ mb: 2 }}>
+                  <GoogleLogin
+                    onSuccess={handleGoogleSignup}
+                    onError={handleGoogleError}
+                    useOneTap={false}
+                    theme="outline"
+                    size="large"
+                    width="100%"
+                    text="continue_with"
+                    shape="rectangular"
+                  />
+                </Box>
+              ) : (
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  size="large"
+                  startIcon={<Google />}
+                  onClick={() => toast.info('Google OAuth is being configured. Please use email signup for now.')}
+                  sx={{ mb: 2, py: 1.5 }}
+                >
+                  Continue with Google (Coming Soon)
+                </Button>
+              )}
               
               <Button
                 fullWidth
@@ -185,7 +248,7 @@ const IndividualSignup = () => {
               <Link
                 component="button"
                 variant="body2"
-                onClick={() => navigate('/signup')}
+                onClick={() => navigate('/register')}
                 type="button"
               >
                 Company Signup

@@ -318,7 +318,7 @@ const authenticateToken = (req, res, next) => {
 // Individual registration endpoint
 app.post('/api/auth/individual/register', async (req, res) => {
   try {
-    const { email, password, userType } = req.body;
+    const { email, password, userType, provider, googleId, fullName, emailVerified } = req.body;
 
     // Validate required fields
     if (!email || !password) {
@@ -340,7 +340,10 @@ app.post('/api/auth/individual/register', async (req, res) => {
       email,
       password: hashedPassword,
       userType: 'individual',
-      emailVerified: false,
+      fullName: fullName || '',
+      provider: provider || 'email',
+      googleId: googleId || null,
+      emailVerified: emailVerified || false,
       phoneVerified: false,
       kycStatus: 'pending',
       accountActive: false,
@@ -351,7 +354,18 @@ app.post('/api/auth/individual/register', async (req, res) => {
 
     individuals.push(individual);
 
-    // Send email OTP for verification
+    // Skip email verification for Google OAuth users
+    if (provider === 'google' && emailVerified) {
+      res.status(201).json({
+        message: 'Google registration successful! Please select your user type.',
+        userId: individual.id,
+        requiresVerification: false,
+        provider: 'google'
+      });
+      return;
+    }
+
+    // Send email OTP for verification (email signup only)
     try {
       const emailResult = await sendEmailOTP(email);
       

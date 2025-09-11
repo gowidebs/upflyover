@@ -92,7 +92,7 @@ const Home = () => {
                     color: 'rgb(30, 86, 86)',
                     '&:hover': { bgcolor: '#f5f5f5' }
                   }}
-                  onClick={() => navigate('/signup')}
+                  onClick={() => navigate('/signup-choice')}
                 >
                   Start Free Trial
                 </Button>
@@ -365,7 +365,7 @@ const Home = () => {
                   boxShadow: '0 12px 40px rgba(30, 86, 86, 0.4)'
                 }
               }}
-              onClick={() => navigate('/signup')}
+              onClick={() => navigate('/signup-choice')}
             >
               Start Your Journey Today
             </Button>
@@ -747,7 +747,7 @@ const Home = () => {
               fontSize: '1.1rem',
               '&:hover': { bgcolor: 'rgb(20, 66, 66)' }
             }}
-            onClick={() => navigate('/signup')}
+            onClick={() => navigate('/signup-choice')}
           >
             Get Started - It's Free
           </Button>
