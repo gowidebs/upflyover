@@ -56,7 +56,7 @@ router.post('/register', validateRegistration, async (req, res) => {
   }
 });
 
-// Login
+// Login with secure HTTP-only cookies
 router.post('/login', validateLogin, async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -84,9 +84,17 @@ router.post('/login', validateLogin, async (req, res) => {
       { expiresIn: '7d' }
     );
     
+    // Set secure HTTP-only cookie
+    res.cookie('upflyover_auth', token, {
+      httpOnly: true,        // Prevents XSS attacks
+      secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+      sameSite: 'strict',    // CSRF protection
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/'
+    });
+    
     res.json({
       message: 'Login successful',
-      token,
       company: {
         id: company._id,
         name: company.name,
@@ -101,23 +109,25 @@ router.post('/login', validateLogin, async (req, res) => {
   }
 });
 
-// Get current company profile
-router.get('/profile', auth, async (req, res) => {
+// Get current company profile (using cookie auth)
+const cookieAuth = require('../middleware/cookieAuth');
+router.get('/profile', cookieAuth, async (req, res) => {
   try {
-    const company = await Company.findById(req.companyId).select('-password');
-    if (!company) {
-      return res.status(404).json({ error: 'Company not found' });
-    }
-    
-    res.json({ company });
+    res.json({ company: req.company });
   } catch (error) {
     console.error('Profile fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch profile' });
   }
 });
 
-// Logout (client-side token removal)
+// Logout (clear secure cookie)
 router.post('/logout', (req, res) => {
+  res.clearCookie('upflyover_auth', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/'
+  });
   res.json({ message: 'Logged out successfully' });
 });
 

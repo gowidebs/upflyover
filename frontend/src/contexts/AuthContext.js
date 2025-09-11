@@ -17,38 +17,36 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState(localStorage.getItem('upflyover_token'));
+  const [token, setToken] = useState(null); // No longer using localStorage
 
+  // Configure axios to send cookies with requests
   useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    } else {
-      delete axios.defaults.headers.common['Authorization'];
-    }
-  }, [token]);
+    axios.defaults.withCredentials = true;
+  }, []);
 
   useEffect(() => {
     const checkAuth = async () => {
-      if (token) {
-        try {
-          const response = await axios.get('/auth/profile');
-          setUser(response.data.company);
-        } catch (error) {
-          logout();
-        }
+      try {
+        const response = await axios.get('/auth/profile');
+        setUser(response.data.company);
+        setToken('authenticated'); // Set a flag to indicate authentication
+      } catch (error) {
+        // No valid cookie found, user not authenticated
+        setUser(null);
+        setToken(null);
       }
       setLoading(false);
     };
     checkAuth();
-  }, [token]);
+  }, []);
 
   const login = async (email, password) => {
     try {
       const response = await axios.post('/auth/login', { email, password });
-      const { token: newToken, company } = response.data;
+      const { company } = response.data;
       
-      localStorage.setItem('upflyover_token', newToken);
-      setToken(newToken);
+      // Cookie is automatically set by the server
+      setToken('authenticated');
       setUser(company);
       
       return { success: true, user: company };
@@ -74,10 +72,9 @@ export const AuthProvider = ({ children }) => {
       if (requiresVerification) {
         return { success: true, requiresVerification: true, companyId };
       } else {
-        // Fallback for old flow
-        const { token: newToken, company } = response.data;
-        localStorage.setItem('upflyover_token', newToken);
-        setToken(newToken);
+        // Fallback for old flow - cookie is set by server
+        const { company } = response.data;
+        setToken('authenticated');
         setUser(company);
         return { success: true, user: company };
       }
@@ -86,11 +83,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('upflyover_token');
+  const logout = async () => {
+    try {
+      await axios.post('/auth/logout');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
     setToken(null);
     setUser(null);
-    delete axios.defaults.headers.common['Authorization'];
   };
 
   const verifyOTP = async (companyId, type, otp) => {
@@ -106,10 +106,10 @@ export const AuthProvider = ({ children }) => {
   const completeVerification = async (companyId) => {
     try {
       const response = await axios.post('/auth/complete-verification', { companyId });
-      const { token: newToken, company } = response.data;
+      const { company } = response.data;
       
-      localStorage.setItem('upflyover_token', newToken);
-      setToken(newToken);
+      // Cookie is set by server
+      setToken('authenticated');
       setUser(company);
       
       return { success: true, user: company };
