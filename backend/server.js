@@ -326,8 +326,38 @@ app.post('/api/auth/individual/register', async (req, res) => {
     }
 
     // Check if user already exists
-    const existingUser = individuals.find(u => u.email === email) || companies.find(c => c.email === email);
-    if (existingUser) {
+    const existingIndividual = individuals.find(u => u.email === email);
+    const existingCompany = companies.find(c => c.email === email);
+    
+    if (existingIndividual || existingCompany) {
+      // For Google OAuth, if user exists, log them in instead
+      if (provider === 'google' && emailVerified) {
+        const existingUser = existingIndividual || existingCompany;
+        
+        // Generate JWT token for login
+        const token = jwt.sign(
+          { id: existingUser.id, email: existingUser.email, userType: existingUser.userType },
+          JWT_SECRET,
+          { expiresIn: '24h' }
+        );
+        
+        return res.status(200).json({
+          message: 'Google login successful!',
+          token,
+          user: {
+            id: existingUser.id,
+            email: existingUser.email,
+            userType: existingUser.userType,
+            fullName: existingUser.fullName || existingUser.name,
+            emailVerified: existingUser.emailVerified,
+            phoneVerified: existingUser.phoneVerified,
+            kycStatus: existingUser.kycStatus,
+            accountActive: existingUser.accountActive
+          },
+          isExistingUser: true
+        });
+      }
+      
       return res.status(400).json({ error: 'User already exists with this email' });
     }
 

@@ -97,15 +97,24 @@ const IndividualSignup = () => {
       const data = await response.json();
 
       if (response.ok) {
-        toast.success('Google signup successful! Please select your user type.');
-        navigate('/user-type-selection', { 
-          state: { 
-            userId: data.userId, 
-            email: decoded.email,
-            userType: 'individual',
-            provider: 'google'
-          } 
-        });
+        if (data.isExistingUser) {
+          // Existing user - log them in
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          toast.success('Welcome back! Logged in successfully.');
+          navigate('/dashboard');
+        } else {
+          // New user - continue with signup flow
+          toast.success('Google signup successful! Please select your user type.');
+          navigate('/user-type-selection', { 
+            state: { 
+              userId: data.userId, 
+              email: decoded.email,
+              userType: 'individual',
+              provider: 'google'
+            } 
+          });
+        }
       } else {
         setError(data.error || 'Google signup failed');
       }
@@ -256,7 +265,7 @@ const IndividualSignup = () => {
               <Link
                 component="button"
                 variant="body2"
-                onClick={() => navigate('/register')}
+                onClick={() => navigate('/signup')}
                 type="button"
               >
                 Company Signup
