@@ -41,7 +41,8 @@ const IndividualSignup = () => {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/individual/register', {
+      const apiUrl = process.env.REACT_APP_API_URL || 'https://upflyover-production.up.railway.app/api';
+      const response = await fetch(`${apiUrl}/auth/individual/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -76,7 +77,8 @@ const IndividualSignup = () => {
       const decoded = jwtDecode(credentialResponse.credential);
       
       // Register with Google data
-      const response = await fetch('/api/auth/individual/register', {
+      const apiUrl = process.env.REACT_APP_API_URL || 'https://upflyover-production.up.railway.app/api';
+      const response = await fetch(`${apiUrl}/auth/individual/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -109,13 +111,19 @@ const IndividualSignup = () => {
       }
     } catch (error) {
       console.error('Google signup error:', error);
-      setError('Google signup failed. Please try again.');
+      if (error.message.includes('CORS')) {
+        setError('Connection error. Please try email signup.');
+      } else {
+        setError('Google signup failed. Please try email signup instead.');
+      }
     }
     setLoading(false);
   };
 
-  const handleGoogleError = () => {
-    setError('Google signup was cancelled or failed');
+  const handleGoogleError = (error) => {
+    console.error('Google OAuth error:', error);
+    setError('Google signup failed. Please try email signup instead.');
+    setLoading(false);
   };
 
   const handleAppleSignup = () => {
