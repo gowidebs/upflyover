@@ -15,22 +15,25 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import VerifyRemaining from '../components/VerifyRemaining';
+import SubscriptionStatus from '../components/SubscriptionStatus';
+import MessagesWidget from '../components/MessagesWidget';
 
 
 const Dashboard = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
   const [kycStatus, setKycStatus] = useState(null);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated && !loading) {
       navigate('/login');
       return;
     }
-    // Allow access to dashboard for KYC submission
-    fetchKycStatus();
-  }, [isAuthenticated, navigate]);
+    if (isAuthenticated) {
+      fetchKycStatus();
+    }
+  }, [isAuthenticated, loading, navigate]);
 
   const fetchKycStatus = async () => {
     // Mock KYC status for now
@@ -90,6 +93,16 @@ const Dashboard = () => {
       status: kycStatus?.status === 'approved' ? 'completed' : 'pending'
     }
   ];
+
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4, textAlign: 'center' }}>
+        <LinearProgress sx={{ mb: 2 }} />
+        <Typography>Loading dashboard...</Typography>
+      </Container>
+    );
+  }
 
   const quickActions = [
     { 
@@ -301,8 +314,18 @@ const Dashboard = () => {
 
 
 
+        {/* Messages Widget */}
+        <Grid item xs={12} lg={4}>
+          <MessagesWidget />
+        </Grid>
+        
+        {/* Subscription Status */}
+        <Grid item xs={12} lg={4}>
+          <SubscriptionStatus />
+        </Grid>
+
         {/* Quick Actions */}
-        <Grid item xs={12} lg={6}>
+        <Grid item xs={12} lg={4}>
           <Card elevation={2}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
