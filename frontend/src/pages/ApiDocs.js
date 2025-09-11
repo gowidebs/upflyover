@@ -180,7 +180,7 @@ const ApiDocs = () => {
               fontFamily: 'monospace',
               fontSize: '0.9rem'
             }}>
-              Authorization: Bearer YOUR_API_KEY
+              Authorization: Bearer {API_KEY}
             </Box>
           </Card>
         </Grid>

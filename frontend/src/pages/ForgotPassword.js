@@ -35,7 +35,9 @@ const ForgotPassword = () => {
       if (response.ok) {
         setSent(true);
         toast.success('Password reset link sent! Check the console for the link (in production, this will be emailed).');
-        console.log('Reset Link:', data.resetLink); // For testing
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('Reset Link:', data.resetLink); // For testing only
+        }
       } else {
         toast.error(data.error || 'Email not found');
       }

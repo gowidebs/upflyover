@@ -12,6 +12,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import axios from 'axios';
 
 const CompanyProfile = () => {
@@ -103,11 +104,11 @@ const CompanyProfile = () => {
 
       if (response.data.success) {
         setEditMode(false);
-        alert('Profile updated successfully!');
+        toast.success('Profile updated successfully!');
       }
     } catch (error) {
       console.error('Error saving profile:', error);
-      alert('Failed to save profile');
+      toast.error('Failed to save profile');
     } finally {
       setLoading(false);
     }

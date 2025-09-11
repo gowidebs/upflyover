@@ -26,7 +26,8 @@ const IndividualEmailVerify = () => {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/individual/verify-email', {
+      const apiUrl = process.env.REACT_APP_API_URL || 'https://upflyover-production.up.railway.app/api';
+      const response = await fetch(`${apiUrl}/auth/individual/verify-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
