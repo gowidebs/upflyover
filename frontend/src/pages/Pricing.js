@@ -1,12 +1,91 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Container, Typography, Box, Grid, Card, CardContent, 
-  Button, Stack, Chip, List, ListItem, ListItemIcon, ListItemText 
+  Button, Stack, Chip, List, ListItem, ListItemIcon, ListItemText,
+  Alert, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
 import { Check, Star, Business, TrendingUp, Person } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import MobileAppSection from '../components/MobileAppSection';
+import { createCheckoutSession, getSubscriptionStatus } from '../utils/stripe';
 
 const Pricing = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [subscription, setSubscription] = useState(null);
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState('');
+  
+  const token = localStorage.getItem('token');
+  const isLoggedIn = !!token;
+  
+  useEffect(() => {
+    if (isLoggedIn) {
+      loadSubscriptionStatus();
+    }
+  }, [isLoggedIn]);
+  
+  const loadSubscriptionStatus = async () => {
+    try {
+      const status = await getSubscriptionStatus(token);
+      setSubscription(status);
+    } catch (error) {
+      console.error('Failed to load subscription:', error);
+    }
+  };
+  
+  const handlePlanSelect = async (planName) => {
+    if (planName === 'starter') {
+      if (!isLoggedIn) {
+        navigate('/signup/choice');
+      } else {
+        navigate('/dashboard');
+      }
+      return;
+    }
+    
+    if (planName === 'enterprise') {
+      // Contact sales for enterprise
+      window.location.href = 'mailto:sales@upflyover.com?subject=Enterprise Plan Inquiry';
+      return;
+    }
+    
+    if (!isLoggedIn) {
+      setSelectedPlan(planName);
+      setShowLoginDialog(true);
+      return;
+    }
+    
+    // Handle paid plans (Professional)
+    if (planName === 'professional') {
+      await handleCheckout('professional');
+    }
+  };
+  
+  const handleCheckout = async (plan) => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      const result = await createCheckoutSession(plan, token);
+      window.location.href = result.checkoutUrl;
+    } catch (error) {
+      setError(error.message || 'Failed to start checkout process');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleLoginRedirect = () => {
+    setShowLoginDialog(false);
+    navigate('/login', { state: { returnTo: '/pricing', selectedPlan } });
+  };
+  
+  const handleSignupRedirect = () => {
+    setShowLoginDialog(false);
+    navigate('/signup/choice', { state: { returnTo: '/pricing', selectedPlan } });
+  };
   const plans = [
     {
       name: 'Starter',
@@ -145,6 +224,7 @@ const Pricing = () => {
                   variant={plan.popular ? 'contained' : 'outlined'}
                   fullWidth
                   size="large"
+                  onClick={() => handlePlanSelect(plan.name.toLowerCase())}
                   sx={{
                     py: 1.5,
                     bgcolor: plan.popular ? 'rgb(30, 86, 86)' : 'transparent',
@@ -203,6 +283,7 @@ const Pricing = () => {
         <Button
           variant="contained"
           size="large"
+          onClick={() => handlePlanSelect('enterprise')}
           sx={{
             mt: 4,
             bgcolor: 'rgb(30, 86, 86)',
@@ -212,6 +293,49 @@ const Pricing = () => {
           Contact Enterprise Sales
         </Button>
       </Box>
+      
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 4 }}>
+          {error}
+        </Alert>
+      )}
+      
+      {/* Loading Overlay */}
+      {loading && (
+        <Box sx={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          bgcolor: 'rgba(0,0,0,0.5)', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <Box sx={{ textAlign: 'center', color: 'white' }}>
+            <CircularProgress color="inherit" />
+            <Typography sx={{ mt: 2 }}>Redirecting to checkout...</Typography>
+          </Box>
+        </Box>
+      )}
+      
+      {/* Login Dialog */}
+      <Dialog open={showLoginDialog} onClose={() => setShowLoginDialog(false)}>
+        <DialogTitle>Login Required</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Please login or create an account to subscribe to the {selectedPlan} plan.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowLoginDialog(false)}>Cancel</Button>
+          <Button onClick={handleLoginRedirect} variant="outlined">Login</Button>
+          <Button onClick={handleSignupRedirect} variant="contained">Sign Up</Button>
+        </DialogActions>
+      </Dialog>
       
       {/* Mobile App Section */}
       <MobileAppSection />

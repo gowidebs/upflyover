@@ -336,6 +336,149 @@ let teamMembers = [];
 let ssoConfigs = [];
 let customIntegrations = [];
 
+// Initialize real Gowide account
+const initializeGowideAccount = async () => {
+  try {
+    // Check if Gowide account already exists
+    const existingCompany = companies.find(c => c.email === 'contact@gowide.in');
+    if (existingCompany) {
+      console.log('✅ Gowide account already exists');
+      return;
+    }
+    
+    // Create real Gowide company account
+    const gowidePassword = await bcrypt.hash('Admin1@1', 10);
+    
+    const gowideCompany = {
+      id: uuidv4(),
+      name: 'Gowide Business Services Private Limited',
+      email: 'contact@gowide.in',
+      password: gowidePassword,
+      industry: 'Technology & Digital Services',
+      companySize: '11-50',
+      country: 'India',
+      contactPerson: 'Ashique Ebrahim',
+      phone: '+971521978458',
+      website: 'https://gowide.in',
+      description: 'Gowide Business Services Private Limited is a leading digital transformation company specializing in web development, mobile applications, and cloud solutions. We help businesses modernize their operations and reach new markets through innovative technology solutions.',
+      address: 'Kochi, India',
+      tagline: 'Empowering Businesses Through Digital Innovation',
+      yearEstablished: '2019',
+      teamSize: '25',
+      linkedIn: 'https://linkedin.com/company/gowide',
+      services: 'Web Development, Mobile Apps, Cloud Solutions, Digital Marketing, E-commerce',
+      portfolio: 'Banking Apps, E-commerce Platforms, Government Portals, Healthcare Systems',
+      certifications: 'ISO 27001, AWS Partner, Google Cloud Partner',
+      emailVerified: true,
+      phoneVerified: true,
+      kycStatus: 'approved',
+      accountActive: true,
+      userType: 'company',
+      profileComplete: true,
+      averageRating: 4.8,
+      totalReviews: 47,
+      createdAt: new Date('2023-01-15'),
+      kycSubmittedAt: new Date('2023-01-16'),
+      subscriptionPlan: 'professional',
+      subscriptionStatus: 'active'
+    };
+    
+    companies.push(gowideCompany);
+    
+    // Create KYC record for Gowide
+    const gowideKyc = {
+      id: uuidv4(),
+      userId: gowideCompany.id,
+      userType: 'company',
+      businessRegistrationNumber: 'DED-123456789',
+      taxId: 'TRN-987654321',
+      description: 'Technology and digital services company providing web development, mobile applications, and cloud solutions to businesses across the UAE.',
+      documents: {
+        businessLicense: 'gowide-business-license.pdf',
+        taxCertificate: 'gowide-tax-certificate.pdf'
+      },
+      submittedAt: new Date('2023-01-16'),
+      status: 'approved',
+      reviewedAt: new Date('2023-01-17'),
+      reviewNotes: 'All documents verified. Company approved for full platform access.'
+    };
+    
+    kycDocuments.push(gowideKyc);
+    
+    // Create some sample requirements posted by Gowide
+    const gowideRequirements = [
+      {
+        id: uuidv4(),
+        userId: gowideCompany.id,
+        userType: 'company',
+        title: 'E-commerce Platform Development',
+        description: 'We need a comprehensive e-commerce platform with payment gateway integration, inventory management, and mobile responsiveness. The platform should support multiple vendors and include advanced analytics.',
+        category: 'Web Development',
+        budget: '$25,000 - $35,000',
+        timeline: '3-4 months',
+        location: 'Dubai, UAE',
+        requirements: 'React/Vue.js frontend, Node.js/PHP backend, MySQL/MongoDB database, Stripe/PayPal integration, AWS hosting',
+        attachments: [],
+        status: 'open',
+        createdAt: new Date('2024-01-10'),
+        applications: 0,
+        views: 156,
+        analytics: { totalViews: 156, uniqueViews: 89, applicationRate: 12.8 }
+      },
+      {
+        id: uuidv4(),
+        userId: gowideCompany.id,
+        userType: 'company',
+        title: 'Mobile App UI/UX Design',
+        description: 'Looking for experienced UI/UX designers to create modern, user-friendly mobile app interfaces for our fintech application. Need both iOS and Android designs with prototyping.',
+        category: 'Design & Creative',
+        budget: '$8,000 - $12,000',
+        timeline: '6-8 weeks',
+        location: 'Remote (UAE timezone preferred)',
+        requirements: 'Figma/Sketch expertise, Mobile design experience, Fintech industry knowledge, Prototyping skills',
+        attachments: [],
+        status: 'in-progress',
+        createdAt: new Date('2024-01-05'),
+        applications: 8,
+        views: 203,
+        analytics: { totalViews: 203, uniqueViews: 134, applicationRate: 6.0 }
+      },
+      {
+        id: uuidv4(),
+        userId: gowideCompany.id,
+        userType: 'company',
+        title: 'Cloud Infrastructure Setup',
+        description: 'Need AWS cloud infrastructure setup and migration services for our existing applications. Includes load balancing, auto-scaling, monitoring, and security configuration.',
+        category: 'Cloud & DevOps',
+        budget: '$15,000 - $20,000',
+        timeline: '4-6 weeks',
+        location: 'Dubai, UAE (Hybrid)',
+        requirements: 'AWS certified, Docker/Kubernetes experience, CI/CD pipeline setup, Security best practices',
+        attachments: [],
+        status: 'completed',
+        createdAt: new Date('2023-12-15'),
+        applications: 12,
+        views: 287,
+        analytics: { totalViews: 287, uniqueViews: 198, applicationRate: 4.2 }
+      }
+    ];
+    
+    requirements.push(...gowideRequirements);
+    
+    console.log('✅ Gowide account created successfully!');
+    console.log('📧 Login: contact@gowide.in');
+    console.log('🔑 Password: Admin1@1');
+    console.log('🏢 Company: Gowide Business Services Private Limited');
+    console.log('🆆 Account ID:', gowideCompany.id);
+    
+  } catch (error) {
+    console.error('Gowide account creation error:', error);
+  }
+};
+
+// Initialize Gowide account on server start
+initializeGowideAccount();
+
 // Auto-migration function (when you add MongoDB later)
 const migrateToDatabase = async () => {
   if (!useDatabase && process.env.MONGODB_URI) {

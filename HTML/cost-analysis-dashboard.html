@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upflyover - Cost Analysis Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e5656 0%, #2d7d7d 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            color: #1e5656;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .metric-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #1e5656;
+            margin-bottom: 10px;
+        }
+        
+        .metric-label {
+            color: #666;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .chart-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .chart-title {
+            font-size: 1.5rem;
+            color: #1e5656;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .user-selector {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .user-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        
+        .user-btn {
+            background: #1e5656;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .user-btn:hover {
+            background: #2d7d7d;
+            transform: scale(1.05);
+        }
+        
+        .user-btn.active {
+            background: #ff6b35;
+            box-shadow: 0 3px 15px rgba(255, 107, 53, 0.3);
+        }
+        
+        .breakdown-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .breakdown-table th,
+        .breakdown-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .breakdown-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+            color: #1e5656;
+        }
+        
+        .profit-positive {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .cost-item {
+            color: #dc3545;
+        }
+        
+        .revenue-item {
+            color: #28a745;
+        }
+        
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .user-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 Upflyover Cost Analysis Dashboard</h1>
+        <p>Interactive financial projections and cost breakdown across user scales</p>
+    </div>
+
+    <div class="container">
+        <div class="user-selector">
+            <h3>Select User Scale</h3>
+            <div class="user-buttons">
+                <button class="user-btn active" onclick="updateDashboard(0)">100 Users</button>
+                <button class="user-btn" onclick="updateDashboard(1)">1,000 Users</button>
+                <button class="user-btn" onclick="updateDashboard(2)">10,000 Users</button>
+                <button class="user-btn" onclick="updateDashboard(3)">100,000 Users</button>
+                <button class="user-btn" onclick="updateDashboard(4)">1,000,000 Users</button>
+            </div>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-value" id="totalUsers">100</div>
+                <div class="metric-label">Total Users</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="monthlyRevenue">$3,970</div>
+                <div class="metric-label">Monthly Revenue</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="monthlyCosts">$41</div>
+                <div class="metric-label">Monthly Costs</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="netProfit">$3,929</div>
+                <div class="metric-label">Net Profit</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="profitMargin">98.97%</div>
+                <div class="metric-label">Profit Margin</div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h3 class="chart-title">Revenue vs Costs Comparison</h3>
+                <canvas id="revenueChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3 class="chart-title">Cost Breakdown</h3>
+                <canvas id="costChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h3 class="chart-title">Scaling Analysis - All User Levels</h3>
+            <canvas id="scalingChart"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h3 class="chart-title">Detailed Cost Breakdown</h3>
+            <table class="breakdown-table">
+                <thead>
+                    <tr>
+                        <th>Service</th>
+                        <th>Monthly Cost</th>
+                        <th>Annual Cost</th>
+                        <th>% of Total</th>
+                    </tr>
+                </thead>
+                <tbody id="costBreakdown">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const userData = [
+            {
+                users: 100,
+                revenue: 9900,
+                costs: 41,
+                infrastructure: 5,
+                services: 28,
+                thirdParty: 8,
+                breakdown: {
+                    'Vercel (Frontend)': 0,
+                    'Railway (Backend)': 5,
+                    'MongoDB Atlas': 0,
+                    'Stripe Processing': 15,
+                    'Twilio SMS/Email': 5,
+                    'AWS S3/CloudFront': 5,
+                    'SendGrid Email': 0,
+                    'Apple Developer': 8,
+                    'Monitoring': 0
+                }
+            },
+            {
+                users: 1000,
+                revenue: 99000,
+                costs: 277,
+                infrastructure: 64,
+                services: 205,
+                thirdParty: 8,
+                breakdown: {
+                    'Vercel (Frontend)': 20,
+                    'Railway (Backend)': 20,
+                    'MongoDB Atlas': 9,
+                    'Stripe Processing': 150,
+                    'Twilio SMS/Email': 25,
+                    'AWS S3/CloudFront': 15,
+                    'SendGrid Email': 15,
+                    'Apple Developer': 8,
+                    'Monitoring': 15
+                }
+            },
+            {
+                users: 10000,
+                revenue: 990000,
+                costs: 2277,
+                infrastructure: 564,
+                services: 1705,
+                thirdParty: 8,
+                breakdown: {
+                    'Vercel (Frontend)': 200,
+                    'Railway (Backend)': 200,
+                    'MongoDB Atlas': 89,
+                    'Stripe Processing': 1500,
+                    'Twilio SMS/Email': 125,
+                    'AWS S3/CloudFront': 75,
+                    'SendGrid Email': 75,
+                    'Apple Developer': 8,
+                    'Monitoring': 5
+                }
+            },
+            {
+                users: 100000,
+                revenue: 9900000,
+                costs: 22277,
+                infrastructure: 5564,
+                services: 16705,
+                thirdParty: 8,
+                breakdown: {
+                    'Vercel (Frontend)': 2000,
+                    'Railway (Backend)': 2000,
+                    'MongoDB Atlas': 889,
+                    'Stripe Processing': 15000,
+                    'Twilio SMS/Email': 675,
+                    'AWS S3/CloudFront': 675,
+                    'SendGrid Email': 30,
+                    'Apple Developer': 8,
+                    'Monitoring': 0
+                }
+            },
+            {
+                users: 1000000,
+                revenue: 99000000,
+                costs: 222777,
+                infrastructure: 55564,
+                services: 167205,
+                thirdParty: 8,
+                breakdown: {
+                    'Vercel (Frontend)': 20000,
+                    'Railway (Backend)': 20000,
+                    'MongoDB Atlas': 8889,
+                    'Stripe Processing': 150000,
+                    'Twilio SMS/Email': 6750,
+                    'AWS S3/CloudFront': 6750,
+                    'SendGrid Email': 300,
+                    'Apple Developer': 8,
+                    'Monitoring': 80
+                }
+            }
+        ];
+
+        let currentUserIndex = 0;
+        let revenueChart, costChart, scalingChart;
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+
+        function formatPercentage(value) {
+            return value.toFixed(2) + '%';
+        }
+
+        function updateMetrics() {
+            const data = userData[currentUserIndex];
+            const netProfit = data.revenue - data.costs;
+            const profitMargin = (netProfit / data.revenue) * 100;
+
+            document.getElementById('totalUsers').textContent = data.users.toLocaleString();
+            document.getElementById('monthlyRevenue').textContent = formatCurrency(data.revenue);
+            document.getElementById('monthlyCosts').textContent = formatCurrency(data.costs);
+            document.getElementById('netProfit').textContent = formatCurrency(netProfit);
+            document.getElementById('profitMargin').textContent = formatPercentage(profitMargin);
+        }
+
+        function updateCostBreakdown() {
+            const data = userData[currentUserIndex];
+            const tbody = document.getElementById('costBreakdown');
+            tbody.innerHTML = '';
+
+            Object.entries(data.breakdown).forEach(([service, cost]) => {
+                const row = tbody.insertRow();
+                const percentage = ((cost / data.costs) * 100).toFixed(1);
+                
+                row.innerHTML = `
+                    <td>${service}</td>
+                    <td class="cost-item">${formatCurrency(cost)}</td>
+                    <td class="cost-item">${formatCurrency(cost * 12)}</td>
+                    <td>${percentage}%</td>
+                `;
+            });
+
+            // Add total row
+            const totalRow = tbody.insertRow();
+            totalRow.innerHTML = `
+                <td><strong>Total Monthly Costs</strong></td>
+                <td class="cost-item"><strong>${formatCurrency(data.costs)}</strong></td>
+                <td class="cost-item"><strong>${formatCurrency(data.costs * 12)}</strong></td>
+                <td><strong>100%</strong></td>
+            `;
+
+            // Add revenue and profit rows
+            const revenueRow = tbody.insertRow();
+            revenueRow.innerHTML = `
+                <td><strong>Monthly Revenue</strong></td>
+                <td class="revenue-item"><strong>${formatCurrency(data.revenue)}</strong></td>
+                <td class="revenue-item"><strong>${formatCurrency(data.revenue * 12)}</strong></td>
+                <td><strong>-</strong></td>
+            `;
+
+            const profitRow = tbody.insertRow();
+            const netProfit = data.revenue - data.costs;
+            profitRow.innerHTML = `
+                <td><strong>Net Profit</strong></td>
+                <td class="profit-positive"><strong>${formatCurrency(netProfit)}</strong></td>
+                <td class="profit-positive"><strong>${formatCurrency(netProfit * 12)}</strong></td>
+                <td class="profit-positive"><strong>${formatPercentage((netProfit / data.revenue) * 100)}</strong></td>
+            `;
+        }
+
+        function createRevenueChart() {
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            const data = userData[currentUserIndex];
+            
+            if (revenueChart) {
+                revenueChart.destroy();
+            }
+
+            revenueChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Monthly Revenue', 'Monthly Costs', 'Net Profit'],
+                    datasets: [{
+                        label: 'Amount ($)',
+                        data: [data.revenue, data.costs, data.revenue - data.costs],
+                        backgroundColor: [
+                            '#28a745',
+                            '#dc3545', 
+                            '#1e5656'
+                        ],
+                        borderColor: [
+                            '#1e7e34',
+                            '#c82333',
+                            '#155757'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createCostChart() {
+            const ctx = document.getElementById('costChart').getContext('2d');
+            const data = userData[currentUserIndex];
+            
+            if (costChart) {
+                costChart.destroy();
+            }
+
+            const labels = Object.keys(data.breakdown).filter(key => data.breakdown[key] > 0);
+            const values = labels.map(key => data.breakdown[key]);
+
+            costChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: [
+                            '#FF6384',
+                            '#36A2EB', 
+                            '#FFCE56',
+                            '#4BC0C0',
+                            '#9966FF',
+                            '#FF9F40',
+                            '#FF6384',
+                            '#C9CBCF',
+                            '#4BC0C0'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function createScalingChart() {
+            const ctx = document.getElementById('scalingChart').getContext('2d');
+            
+            if (scalingChart) {
+                scalingChart.destroy();
+            }
+
+            const users = userData.map(d => d.users);
+            const revenues = userData.map(d => d.revenue);
+            const costs = userData.map(d => d.costs);
+            const profits = userData.map(d => d.revenue - d.costs);
+
+            scalingChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: users.map(u => u.toLocaleString() + ' Users'),
+                    datasets: [
+                        {
+                            label: 'Revenue',
+                            data: revenues,
+                            borderColor: '#28a745',
+                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Costs',
+                            data: costs,
+                            borderColor: '#dc3545',
+                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Profit',
+                            data: profits,
+                            borderColor: '#1e5656',
+                            backgroundColor: 'rgba(30, 86, 86, 0.1)',
+                            fill: false,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'User Scale'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Amount ($)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateDashboard(index) {
+            currentUserIndex = index;
+            
+            // Update active button
+            document.querySelectorAll('.user-btn').forEach((btn, i) => {
+                btn.classList.toggle('active', i === index);
+            });
+            
+            updateMetrics();
+            updateCostBreakdown();
+            createRevenueChart();
+            createCostChart();
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDashboard(0);
+            createScalingChart();
+        });
+    </script>
+</body>
+</html>toring': 15
+                }
+            },
+            {
+                users: 10000,
+                revenue: 397000,
+                costs: 2095,
+                infrastructure: 227,
+                services: 1860,
+                thirdParty: 8,
+                breakdown: {
+                    'Vercel (Frontend)': 20,
+                    'Railway (Backend)': 50,
+                    'MongoDB Atlas': 57,
+                    'Stripe Processing': 1500,
+                    'Twilio SMS/Email': 150,
+                    'AWS S3/CloudFront': 50,
+                    'SendGrid Email': 60,
+                    'Apple Developer': 8,
+                    'Monitoring': 100
+                }
+            },
+            {
+                users: 100000,
+                revenue: 3970000,
+                costs: 17938,
+                infrastructure: 1030,
+                services: 16900,
+                thirdParty: 8,
+                breakdown: {
+                    'Vercel (Frontend)': 150,
+                    'Railway (Backend)': 200,
+                    'MongoDB Atlas': 180,
+                    'Stripe Processing': 15000,
+                    'Twilio SMS/Email': 1000,
+                    'AWS S3/CloudFront': 200,
+                    'SendGrid Email': 200,
+                    'Apple Developer': 8,
+                    'Monitoring': 500
+                }
+            },
+            {
+                users: 1000000,
+                revenue: 39700000,
+                costs: 164248,
+                infrastructure: 2690,
+                services: 161550,
+                thirdParty: 8,
+                breakdown: {
+                    'Vercel (Frontend)': 500,
+                    'Railway (Backend)': 800,
+                    'MongoDB Atlas': 590,
+                    'Stripe Processing': 150000,
+                    'Twilio SMS/Email': 8000,
+                    'AWS S3/CloudFront': 800,
+                    'SendGrid Email': 750,
+                    'Apple Developer': 8,
+                    'Monitoring': 2000
+                }
+            }
+        ];
+
+        let currentIndex = 0;
+        let revenueChart, costChart, scalingChart;
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+
+        function formatNumber(num) {
+            return new Intl.NumberFormat('en-US').format(num);
+        }
+
+        function updateMetrics(index) {
+            const data = userData[index];
+            const profit = data.revenue - data.costs;
+            const margin = ((profit / data.revenue) * 100).toFixed(2);
+
+            document.getElementById('totalUsers').textContent = formatNumber(data.users);
+            document.getElementById('monthlyRevenue').textContent = formatCurrency(data.revenue);
+            document.getElementById('monthlyCosts').textContent = formatCurrency(data.costs);
+            document.getElementById('netProfit').textContent = formatCurrency(profit);
+            document.getElementById('profitMargin').textContent = margin + '%';
+        }
+
+        function updateCostBreakdown(index) {
+            const data = userData[index];
+            const tbody = document.getElementById('costBreakdown');
+            tbody.innerHTML = '';
+
+            Object.entries(data.breakdown).forEach(([service, cost]) => {
+                const percentage = ((cost / data.costs) * 100).toFixed(1);
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${service}</td>
+                    <td class="cost-item">${formatCurrency(cost)}</td>
+                    <td class="cost-item">${formatCurrency(cost * 12)}</td>
+                    <td>${percentage}%</td>
+                `;
+            });
+        }
+
+        function createRevenueChart(index) {
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            const data = userData[index];
+            
+            if (revenueChart) revenueChart.destroy();
+            
+            revenueChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Monthly Revenue', 'Monthly Costs', 'Net Profit'],
+                    datasets: [{
+                        data: [data.revenue, data.costs, data.revenue - data.costs],
+                        backgroundColor: ['#28a745', '#dc3545', '#1e5656'],
+                        borderColor: ['#1e7e34', '#c82333', '#155252'],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createCostChart(index) {
+            const ctx = document.getElementById('costChart').getContext('2d');
+            const data = userData[index];
+            
+            if (costChart) costChart.destroy();
+            
+            costChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(data.breakdown),
+                    datasets: [{
+                        data: Object.values(data.breakdown),
+                        backgroundColor: [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                            '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function createScalingChart() {
+            const ctx = document.getElementById('scalingChart').getContext('2d');
+            
+            if (scalingChart) scalingChart.destroy();
+            
+            scalingChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: userData.map(d => formatNumber(d.users) + ' Users'),
+                    datasets: [
+                        {
+                            label: 'Revenue',
+                            data: userData.map(d => d.revenue),
+                            borderColor: '#28a745',
+                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                            fill: true
+                        },
+                        {
+                            label: 'Costs',
+                            data: userData.map(d => d.costs),
+                            borderColor: '#dc3545',
+                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                            fill: true
+                        },
+                        {
+                            label: 'Profit',
+                            data: userData.map(d => d.revenue - d.costs),
+                            borderColor: '#1e5656',
+                            backgroundColor: 'rgba(30, 86, 86, 0.1)',
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            type: 'logarithmic',
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateDashboard(index) {
+            currentIndex = index;
+            
+            // Update active button
+            document.querySelectorAll('.user-btn').forEach((btn, i) => {
+                btn.classList.toggle('active', i === index);
+            });
+            
+            updateMetrics(index);
+            updateCostBreakdown(index);
+            createRevenueChart(index);
+            createCostChart(index);
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDashboard(0);
+            createScalingChart();
+        });
+    </script>
+</body>
+</html>

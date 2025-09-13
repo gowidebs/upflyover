@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   AppBar, Toolbar, Typography, Button, Box, Avatar,
   Menu, MenuItem, IconButton, Badge, InputBase,
@@ -14,6 +14,7 @@ import { styled, alpha } from '@mui/material/styles';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import UpflyoverLogo from './UpflyoverLogo';
+import NotificationCenter from './NotificationCenter';
 
 const SearchBox = styled('div')(({ theme }) => ({
   position: 'relative',
@@ -64,7 +65,6 @@ const Navbar = () => {
   const { user, logout, isAuthenticated } = useAuth();
   
   const [anchorEl, setAnchorEl] = useState(null);
-  const [notificationAnchor, setNotificationAnchor] = useState(null);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
 
@@ -72,13 +72,10 @@ const Navbar = () => {
     setAnchorEl(event.currentTarget);
   };
 
-  const handleNotificationMenu = (event) => {
-    setNotificationAnchor(event.currentTarget);
-  };
+
 
   const handleClose = () => {
     setAnchorEl(null);
-    setNotificationAnchor(null);
   };
 
   const handleLogout = () => {
@@ -91,20 +88,14 @@ const Navbar = () => {
     setMobileDrawerOpen(!mobileDrawerOpen);
   };
 
-  const navigationItems = [
+  const navigationItems = useMemo(() => [
     { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
     { text: 'Requirements', icon: <Assignment />, path: '/requirements' },
     { text: 'Companies', icon: <People />, path: '/companies' },
     { text: 'Messages', icon: <Message />, path: '/messages' },
-  ];
+  ], []);
 
-  const notifications = [
-    { id: 1, text: 'New connection request from Gulf Trading LLC', time: '2h ago', unread: true },
-    { id: 2, text: 'Your requirement received 3 new responses', time: '4h ago', unread: true },
-    { id: 3, text: 'Profile verification completed', time: '1d ago', unread: false },
-  ];
 
-  const unreadCount = notifications.filter(n => n.unread).length;
 
   const drawer = (
     <Box sx={{ width: 250 }} role="presentation">
@@ -134,6 +125,10 @@ const Navbar = () => {
                 <ListItemText primary={item.text} />
               </ListItem>
             ))}
+            <ListItem button onClick={() => { navigate('/search'); setMobileDrawerOpen(false); }}>
+              <ListItemIcon><Search /></ListItemIcon>
+              <ListItemText primary="Search" />
+            </ListItem>
             <Divider sx={{ my: 1 }} />
             <ListItem button onClick={() => { navigate('/profile'); setMobileDrawerOpen(false); }}>
               <ListItemIcon><Person /></ListItemIcon>
@@ -151,7 +146,7 @@ const Navbar = () => {
         ) : (
           <>
             <ListItem button onClick={() => { navigate('/explore'); setMobileDrawerOpen(false); }}>
-              <ListItemIcon><People /></ListItemIcon>
+              <ListItemIcon><Search /></ListItemIcon>
               <ListItemText primary="Explore" />
             </ListItem>
             <ListItem button onClick={() => { navigate('/about'); setMobileDrawerOpen(false); }}>
@@ -159,7 +154,7 @@ const Navbar = () => {
               <ListItemText primary="About" />
             </ListItem>
             <ListItem button onClick={() => { navigate('/pricing'); setMobileDrawerOpen(false); }}>
-              <ListItemIcon><People /></ListItemIcon>
+              <ListItemIcon><Person /></ListItemIcon>
               <ListItemText primary="Pricing" />
             </ListItem>
             <ListItem button onClick={() => { navigate('/contact'); setMobileDrawerOpen(false); }}>
@@ -169,6 +164,10 @@ const Navbar = () => {
             <ListItem button onClick={() => { navigate('/companies'); setMobileDrawerOpen(false); }}>
               <ListItemIcon><People /></ListItemIcon>
               <ListItemText primary="Explore Companies" />
+            </ListItem>
+            <ListItem button onClick={() => { navigate('/search'); setMobileDrawerOpen(false); }}>
+              <ListItemIcon><Search /></ListItemIcon>
+              <ListItemText primary="Search" />
             </ListItem>
             <ListItem button onClick={() => { navigate('/login'); setMobileDrawerOpen(false); }}>
               <ListItemIcon><Person /></ListItemIcon>
@@ -256,17 +255,27 @@ const Navbar = () => {
 
           {/* Search Bar */}
           {!isMobile && isAuthenticated && (
-            <SearchBox>
-              <SearchIconWrapper>
-                <Search />
-              </SearchIconWrapper>
-              <StyledInputBase
-                placeholder="Search companies, requirements..."
-                inputProps={{ 'aria-label': 'search' }}
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-              />
-            </SearchBox>
+            <Box
+              component="form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (searchValue.trim()) {
+                  navigate(`/search?q=${encodeURIComponent(searchValue.trim())}`);
+                }
+              }}
+            >
+              <SearchBox>
+                <SearchIconWrapper>
+                  <Search />
+                </SearchIconWrapper>
+                <StyledInputBase
+                  placeholder="Search companies, requirements..."
+                  inputProps={{ 'aria-label': 'search' }}
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                />
+              </SearchBox>
+            </Box>
           )}
 
           {/* Right Side Actions */}
@@ -292,17 +301,19 @@ const Navbar = () => {
 
             {isAuthenticated && (
               <>
-                {/* Notifications */}
-                <Tooltip title="Notifications">
+                {/* Mobile Search Button */}
+                {isMobile && (
                   <IconButton
                     color="inherit"
-                    onClick={handleNotificationMenu}
+                    onClick={() => navigate('/search')}
+                    sx={{ mr: 1 }}
                   >
-                    <Badge badgeContent={unreadCount} color="secondary">
-                      <Notifications />
-                    </Badge>
+                    <Search />
                   </IconButton>
-                </Tooltip>
+                )}
+                
+                {/* Notifications */}
+                <NotificationCenter />
 
                 {/* Profile Menu */}
                 <Tooltip title="Account">
@@ -362,44 +373,7 @@ const Navbar = () => {
         </MenuItem>
       </Menu>
 
-      {/* Notifications Menu */}
-      <Menu
-        anchorEl={notificationAnchor}
-        open={Boolean(notificationAnchor)}
-        onClose={handleClose}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        PaperProps={{ sx: { width: 320, maxHeight: 400 } }}
-      >
-        <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h6">Notifications</Typography>
-        </Box>
-        {notifications.map((notification) => (
-          <MenuItem 
-            key={notification.id} 
-            onClick={handleClose}
-            sx={{ 
-              whiteSpace: 'normal',
-              bgcolor: notification.unread ? 'action.hover' : 'transparent'
-            }}
-          >
-            <Box>
-              <Typography variant="body2">
-                {notification.text}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {notification.time}
-              </Typography>
-            </Box>
-          </MenuItem>
-        ))}
-        <Divider />
-        <MenuItem onClick={handleClose} sx={{ justifyContent: 'center' }}>
-          <Typography variant="body2" color="primary">
-            View All Notifications
-          </Typography>
-        </MenuItem>
-      </Menu>
+
     </>
   );
 };

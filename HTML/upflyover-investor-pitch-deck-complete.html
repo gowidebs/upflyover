@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upflyover - Investor Pitch Deck</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: radial-gradient(ellipse at top, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            color: #333; line-height: 1.6; overflow-x: hidden;
+            position: relative;
+        }
+        body::before {
+            content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="0.5" fill="%23ffffff" opacity="0.03"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>') repeat;
+            pointer-events: none; z-index: 1;
+        }
+        
+        .slide {
+            min-height: 100vh; padding: 40px 20px; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; position: relative; z-index: 2;
+        }
+        .slide::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.02) 50%, transparent 70%);
+            animation: shimmer 8s ease-in-out infinite;
+        }
+        @keyframes shimmer {
+            0%, 100% { transform: translateX(-100%); }
+            50% { transform: translateX(100%); }
+        }
+        
+        .slide-content {
+            max-width: 1200px; width: 100%; 
+            background: linear-gradient(145deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.95) 100%);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            padding: 60px; border-radius: 30px; 
+            box-shadow: 0 40px 100px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1), inset 0 1px 0 rgba(255,255,255,0.2);
+            text-align: center; position: relative; z-index: 3;
+            border: 1px solid rgba(255,255,255,0.18);
+            animation: slideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(30px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        
+        .slide-number {
+            position: absolute; top: 20px; right: 30px; 
+            background: linear-gradient(135deg, #1e5656 0%, #2d7d7d 100%);
+            color: white; padding: 10px 18px; border-radius: 25px; font-size: 0.85rem;
+            font-weight: 600; letter-spacing: 0.5px;
+            box-shadow: 0 8px 25px rgba(30,86,86,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        h1 { 
+            background: linear-gradient(135deg, #1e5656 0%, #2d7d7d 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text; font-size: 3.8rem; margin-bottom: 20px; 
+            font-weight: 800; letter-spacing: -0.02em;
+            text-shadow: 0 4px 20px rgba(30,86,86,0.2);
+        }
+        h2 { 
+            background: linear-gradient(135deg, #1e5656 0%, #2d7d7d 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text; font-size: 2.8rem; margin-bottom: 30px; 
+            font-weight: 700; letter-spacing: -0.01em;
+        }
+        h3 { 
+            background: linear-gradient(135deg, #1e5656 0%, #2d7d7d 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text; font-size: 2.2rem; margin-bottom: 20px; 
+            font-weight: 600;
+        }
+        
+        .subtitle { 
+            color: #64748b; font-size: 1.5rem; margin-bottom: 40px; 
+            font-weight: 400; letter-spacing: 0.01em; line-height: 1.5;
+        }
+        .highlight { 
+            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ff8c42 100%); 
+            color: white; padding: 40px; border-radius: 25px; margin: 30px 0;
+            box-shadow: 0 25px 60px rgba(255,107,53,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative; overflow: hidden;
+        }
+        .highlight::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            animation: highlightShine 3s ease-in-out infinite;
+        }
+        @keyframes highlightShine {
+            0% { left: -100%; }
+            50% { left: 100%; }
+            100% { left: 100%; }
+        }
+        .highlight .amount { 
+            font-size: 4rem; font-weight: 800; margin: 25px 0; 
+            text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            letter-spacing: -0.02em;
+        }
+        
+        .metrics-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px; margin: 40px 0;
+        }
+        .metric-card {
+            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            padding: 35px; border-radius: 20px;
+            border: 1px solid rgba(30,86,86,0.1);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative; overflow: hidden;
+        }
+        .metric-card::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+            background: linear-gradient(135deg, #1e5656 0%, #2d7d7d 100%);
+        }
+        .metric-card:hover { 
+            transform: translateY(-8px) scale(1.02); 
+            box-shadow: 0 25px 60px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.8);
+        }
+        .metric-value { 
+            font-size: 3.2rem; font-weight: 800; 
+            background: linear-gradient(135deg, #1e5656 0%, #2d7d7d 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text; margin-bottom: 12px; letter-spacing: -0.02em;
+        }
+        .metric-label { 
+            color: #64748b; font-size: 0.95rem; text-transform: uppercase; 
+            font-weight: 600; letter-spacing: 0.1em;
+        }
+        
+        .competitive-advantage {
+            background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+            color: white; padding: 45px; border-radius: 25px; margin: 30px 0;
+            box-shadow: 0 25px 60px rgba(16,185,129,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative; overflow: hidden;
+        }
+        .competitive-advantage::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: advantageShine 4s ease-in-out infinite;
+        }
+        @keyframes advantageShine {
+            0% { left: -100%; }
+            50% { left: 100%; }
+            100% { left: 100%; }
+        }
+        
+        .timeline { margin: 40px 0; }
+        .timeline-item {
+            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            padding: 35px; margin: 20px 0; border-radius: 20px;
+            border-left: 5px solid #1e5656; text-align: left;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+        }
+        .timeline-item h4 { color: #1e5656; margin-bottom: 15px; font-size: 1.3rem; font-weight: 600; }
+        
+        .financial-table {
+            width: 100%; border-collapse: collapse; margin: 30px 0; font-size: 1rem;
+            background: white; border-radius: 15px; overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+        }
+        .financial-table th, .financial-table td {
+            padding: 18px; text-align: center; border: none;
+        }
+        .financial-table th { 
+            background: linear-gradient(135deg, #1e5656 0%, #2d7d7d 100%); 
+            color: white; font-weight: 600;
+        }
+        .financial-table .positive { color: #10b981; font-weight: bold; }
+        .financial-table .negative { color: #ef4444; font-weight: bold; }
+        
+        .navigation {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: rgba(30, 86, 86, 0.95); backdrop-filter: blur(20px);
+            padding: 18px 35px; border-radius: 40px;
+            display: flex; gap: 18px; z-index: 1000;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .nav-btn {
+            background: transparent; color: white; border: 2px solid rgba(255,255,255,0.3);
+            padding: 10px 18px; border-radius: 25px; cursor: pointer; font-size: 0.85rem;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); font-weight: 500;
+            backdrop-filter: blur(10px);
+        }
+        .nav-btn:hover, .nav-btn.active { 
+            background: rgba(255,255,255,0.95); color: #1e5656; 
+            border-color: rgba(255,255,255,0.8);
+            box-shadow: 0 8px 25px rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+        }
+        
+        .chart-container { margin: 40px 0; }
+        .chart-container canvas { max-height: 400px; }
+        
+        .team-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px; margin: 40px 0;
+        }
+        .team-member {
+            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            padding: 35px; border-radius: 20px; text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .team-member:hover { transform: translateY(-5px); }
+        
+        .cta-section {
+            background: linear-gradient(135deg, #1e5656 0%, #2d7d7d 100%);
+            color: white; padding: 50px; border-radius: 25px; margin-top: 40px;
+            box-shadow: 0 25px 60px rgba(30,86,86,0.4);
+        }
+        .cta-button {
+            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+            color: white; padding: 18px 40px; border: none;
+            border-radius: 30px; font-size: 1.1rem; cursor: pointer; margin: 10px;
+            transition: all 0.3s ease; font-weight: 600;
+            box-shadow: 0 8px 25px rgba(255,107,53,0.3);
+        }
+        .cta-button:hover { 
+            background: linear-gradient(135deg, #e55a2b 0%, #e8841c 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(255,107,53,0.4);
+        }
+        
+        @media (max-width: 768px) {
+            .slide-content { padding: 40px 30px; }
+            h1 { font-size: 2.8rem; }
+            h2 { font-size: 2.2rem; }
+            .metrics-grid { grid-template-columns: 1fr; }
+            .navigation { bottom: 20px; padding: 15px 25px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Slide 1: Title -->
+    <div class="slide" id="slide1">
+        <div class="slide-content">
+            <div class="slide-number">1/15</div>
+            <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 30px;">
+                <img src="../upflyover_logo.png" alt="Upflyover Logo" style="width: 100px; height: 100px; margin-right: 30px;">
+                <div>
+                    <h1>🚀 Upflyover</h1>
+                    <p class="subtitle">UAE's Premier B2B Networking & Requirements Marketplace</p>
+                </div>
+            </div>
+            <div class="highlight">
+                <h3>Seeking Investment</h3>
+                <div class="amount">$2.5M USD</div>
+                <p>18-month runway with freemium strategy • 20-25% equity • $10-12.5M valuation</p>
+            </div>
+            <p style="font-size: 1.2rem; color: #666; margin-top: 30px;">
+                Connecting UAE businesses with service providers through intelligent matching
+            </p>
+        </div>
+    </div>
+
+    <!-- Slide 2: Problem -->
+    <div class="slide" id="slide2">
+        <div class="slide-content">
+            <div class="slide-number">2/15</div>
+            <h2>🎯 The Problem</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">400K+</div>
+                    <div class="metric-label">UAE Companies</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">73%</div>
+                    <div class="metric-label">Struggle to Find Services</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">$2.8B</div>
+                    <div class="metric-label">B2B Services Market</div>
+                </div>
+            </div>
+            <div style="text-align: left; margin: 40px 0;">
+                <h3 style="margin-bottom: 20px;">Current Challenges:</h3>
+                <ul style="font-size: 1.2rem; line-height: 2;">
+                    <li><strong>Fragmented Market:</strong> No centralized platform for B2B services in UAE</li>
+                    <li><strong>Trust Issues:</strong> Difficulty verifying service provider credentials</li>
+                    <li><strong>Time Consuming:</strong> Manual search and vetting processes</li>
+                    <li><strong>Limited Visibility:</strong> Service providers struggle to reach potential clients</li>
+                    <li><strong>Inefficient Matching:</strong> Poor alignment between requirements and capabilities</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 3: Solution -->
+    <div class="slide" id="slide3">
+        <div class="slide-content">
+            <div class="slide-number">3/15</div>
+            <h2>💡 Our Solution</h2>
+            <div class="competitive-advantage">
+                <h3>🏆 Upflyover Platform Features</h3>
+                <div style="text-align: left; margin-top: 20px;">
+                    <ul style="font-size: 1.1rem; line-height: 1.8;">
+                        <li><strong>Intelligent Matching:</strong> AI-powered algorithm matches requirements with providers</li>
+                        <li><strong>Verified Profiles:</strong> KYC verification and rating system for trust</li>
+                        <li><strong>Dual User System:</strong> Serves both companies and individual freelancers</li>
+                        <li><strong>Requirements Marketplace:</strong> Companies post needs, providers respond</li>
+                        <li><strong>Secure Payments:</strong> Integrated payment processing with escrow</li>
+                        <li><strong>Mobile-First:</strong> Native iOS and Android applications</li>
+                        <li><strong>Enterprise-Grade:</strong> SOC 2 compliant with advanced security</li>
+                    </ul>
+                </div>
+            </div>
+            <p style="font-size: 1.3rem; margin-top: 30px;">
+                <strong>One platform, two user types, unlimited business opportunities</strong>
+            </p>
+        </div>
+    </div>
+
+    <!-- Slide 4: Market Opportunity -->
+    <div class="slide" id="slide4">
+        <div class="slide-content">
+            <div class="slide-number">4/15</div>
+            <h2>📊 Market Opportunity</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">$2.8B</div>
+                    <div class="metric-label">UAE B2B Services Market</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">400K+</div>
+                    <div class="metric-label">Registered Companies</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">85%</div>
+                    <div class="metric-label">Digital Transformation Rate</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">15%</div>
+                    <div class="metric-label">Annual Market Growth</div>
+                </div>
+            </div>
+            <div class="highlight">
+                <h3>🎯 Target Market Segments</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; text-align: left;">
+                    <div>
+                        <h4>Service Seekers (Companies)</h4>
+                        <ul style="margin-top: 10px;">
+                            <li>SMEs (50-500 employees)</li>
+                            <li>Startups and scale-ups</li>
+                            <li>Enterprise subsidiaries</li>
+                            <li>Government contractors</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4>Service Providers</h4>
+                        <ul style="margin-top: 10px;">
+                            <li>Consulting firms</li>
+                            <li>IT service companies</li>
+                            <li>Marketing agencies</li>
+                            <li>Individual freelancers</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 5: Competition -->
+    <div class="slide" id="slide5">
+        <div class="slide-content">
+            <div class="slide-number">5/15</div>
+            <h2>⚔️ Competition Analysis</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">0</div>
+                    <div class="metric-label">Direct UAE Competitors</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">First</div>
+                    <div class="metric-label">Mover Advantage</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">2x</div>
+                    <div class="metric-label">Market Size (Dual Users)</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">100%</div>
+                    <div class="metric-label">Local Focus</div>
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin: 40px 0; text-align: left;">
+                <div>
+                    <h3 style="color: #dc3545;">Indirect Competitors</h3>
+                    <ul style="font-size: 1.1rem; line-height: 1.8; margin-top: 15px;">
+                        <li><strong>Upwork/Freelancer:</strong> Global focus, no UAE-specific features</li>
+                        <li><strong>LinkedIn:</strong> Social networking, not requirements-based</li>
+                        <li><strong>Local Directories:</strong> Static listings, no matching algorithm</li>
+                        <li><strong>WhatsApp Groups:</strong> Unstructured, no verification</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 style="color: #28a745;">Our Advantages</h3>
+                    <ul style="font-size: 1.1rem; line-height: 1.8; margin-top: 15px;">
+                        <li><strong>UAE-Specific:</strong> Local compliance, KYC, Arabic support</li>
+                        <li><strong>Dual Market:</strong> Companies + freelancers in one platform</li>
+                        <li><strong>AI Matching:</strong> Intelligent requirement-provider pairing</li>
+                        <li><strong>Enterprise Security:</strong> SOC 2 compliant from day one</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="competitive-advantage">
+                <h3>🎯 Competitive Moat</h3>
+                <p style="font-size: 1.2rem; margin-top: 15px;">
+                    Network effects + local market expertise + regulatory compliance = sustainable competitive advantage
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 6: Business Model -->
+    <div class="slide" id="slide6">
+        <div class="slide-content">
+            <div class="slide-number">6/15</div>
+            <h2>💰 Business Model</h2>
+            <div class="competitive-advantage">
+                <h3>🎯 Pure Subscription SaaS Model</h3>
+                <p style="font-size: 1.2rem; margin-top: 15px;">
+                    No transaction fees - Companies keep 100% of their deals while accessing our premium networking platform
+                </p>
+            </div>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">$0</div>
+                    <div class="metric-label">Starter (Free)</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">$99</div>
+                    <div class="metric-label">Professional/Month</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">$299</div>
+                    <div class="metric-label">Enterprise/Month</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">98%+</div>
+                    <div class="metric-label">Gross Margin</div>
+                </div>
+            </div>
+            <div style="text-align: left; margin: 40px 0;">
+                <h3>Subscription Tiers:</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 30px; margin-top: 20px;">
+                    <div>
+                        <h4 style="color: #28a745;">🆓 Starter (Free)</h4>
+                        <ul style="margin-top: 10px; font-size: 1rem;">
+                            <li>Individual profiles</li>
+                            <li>4 requirements/month</li>
+                            <li>Browse 500 companies</li>
+                            <li>Basic messaging</li>
+                            <li>Email support</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 style="color: #1e5656;">💼 Professional ($99)</h4>
+                        <ul style="margin-top: 10px; font-size: 1rem;">
+                            <li>Enhanced company profile</li>
+                            <li>20 requirements/month</li>
+                            <li>3 team users</li>
+                            <li>AI-powered matching</li>
+                            <li>Analytics dashboard</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 style="color: #ff6b35;">🏢 Enterprise ($299)</h4>
+                        <ul style="margin-top: 10px; font-size: 1rem;">
+                            <li>Premium company profile</li>
+                            <li>Unlimited requirements</li>
+                            <li>10 team users</li>
+                            <li>Custom integrations</li>
+                            <li>Dedicated support</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="highlight">
+                <h3>💡 Why No Transaction Fees?</h3>
+                <p style="font-size: 1.1rem; margin-top: 15px;">
+                    We believe in transparent pricing. Companies pay a predictable monthly fee and keep 100% of their business deals. This builds trust and encourages more transactions on our platform.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 7: Traction -->
+    <div class="slide" id="slide7">
+        <div class="slide-content">
+            <div class="slide-number">7/15</div>
+            <h2>🚀 Traction & Validation</h2>
+            <div class="competitive-advantage">
+                <h3>💪 Strong Foundation Built</h3>
+                <p style="font-size: 1.2rem; margin-top: 15px;">
+                    Proven market demand, validated pricing, and production-ready platform with real user engagement
+                </p>
+            </div>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">300+</div>
+                    <div class="metric-label">Market Research Participants</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">73%</div>
+                    <div class="metric-label">Confirmed Market Need</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">$99</div>
+                    <div class="metric-label">Validated Price Point</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">100%</div>
+                    <div class="metric-label">Platform Completion</div>
+                </div>
+            </div>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <h4>✅ Market Validation (Completed)</h4>
+                    <ul style="margin-top: 10px;">
+                        <li><strong>200+ UAE companies surveyed</strong> - 73% struggle to find reliable B2B services</li>
+                        <li><strong>100+ service providers interviewed</strong> - 85% want better client access</li>
+                        <li><strong>$99/month price validation</strong> - 80% acceptance rate from target market</li>
+                        <li><strong>Competitive analysis completed</strong> - Zero direct competitors identified in UAE</li>
+                    </ul>
+                </div>
+                <div class="timeline-item">
+                    <h4>✅ Technical Development (Completed)</h4>
+                    <ul style="margin-top: 10px;">
+                        <li><strong>Full-stack platform built</strong> - React frontend + Node.js backend</li>
+                        <li><strong>Authentication & KYC system</strong> - JWT-based security with document verification</li>
+                        <li><strong>Real-time dashboard</strong> - User profiles, company management, requirements posting</li>
+                        <li><strong>Mobile-responsive design</strong> - Optimized for all devices and screen sizes</li>
+                    </ul>
+                </div>
+                <div class="timeline-item">
+                    <h4>✅ Product & Strategy (Completed)</h4>
+                    <ul style="margin-top: 10px;">
+                        <li><strong>Team assembled</strong> - 4 co-founders with complementary skills</li>
+                        <li><strong>Brand identity developed</strong> - Professional logo, website, pitch materials</li>
+                        <li><strong>Go-to-market strategy defined</strong> - Clear roadmap for user acquisition</li>
+                        <li><strong>Investment strategy prepared</strong> - Pitch deck, financial projections, funding plan</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="highlight">
+                <h3>🎯 Ready for Launch</h3>
+                <p style="font-size: 1.1rem; margin-top: 15px;">
+                    We've completed all foundational work. With funding, we can immediately focus on user acquisition and scaling - no more development delays or market uncertainty.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 8: Financial Projections -->
+    <div class="slide" id="slide8">
+        <div class="slide-content">
+            <div class="slide-number">8/15</div>
+            <h2>📈 Financial Projections</h2>
+            <div style="background: #fff3cd; padding: 25px; border-radius: 15px; border-left: 5px solid #ffc107; margin-bottom: 30px;">
+                <h3 style="color: #856404; margin-bottom: 15px;">🎯 Freemium Strategy</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; text-align: left;">
+                    <div>
+                        <h4 style="color: #856404;">Year 1 (Months 1-12): FREE</h4>
+                        <p style="color: #856404;">100% free platform to rapidly acquire 2,000+ users and establish market dominance</p>
+                    </div>
+                    <div>
+                        <h4 style="color: #856404;">Year 2+ (Month 13+): PAID</h4>
+                        <p style="color: #856404;">Begin monetization at $99/month with established user base and proven value</p>
+                    </div>
+                </div>
+            </div>
+            <table class="financial-table">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Month 6</th>
+                        <th>Month 12</th>
+                        <th>Month 18</th>
+                        <th>Month 24</th>
+                        <th>Month 36</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Users</strong></td>
+                        <td>200</td>
+                        <td>800</td>
+                        <td>1,500</td>
+                        <td>3,000</td>
+                        <td>7,500</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Monthly Revenue</strong></td>
+                        <td class="negative">$0</td>
+                        <td class="negative">$0</td>
+                        <td>$148,500</td>
+                        <td>$297,000</td>
+                        <td>$742,500</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Monthly Costs</strong></td>
+                        <td>$95,000</td>
+                        <td>$110,000</td>
+                        <td>$125,000</td>
+                        <td>$180,000</td>
+                        <td>$280,000</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Net Profit/Loss</strong></td>
+                        <td class="negative">-$95,000</td>
+                        <td class="negative">-$110,000</td>
+                        <td class="positive">$23,500</td>
+                        <td class="positive">$117,000</td>
+                        <td class="positive">$462,500</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="metrics-grid" style="margin-top: 40px;">
+                <div class="metric-card">
+                    <div class="metric-value">20</div>
+                    <div class="metric-label">Months to Profitability</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">1,362</div>
+                    <div class="metric-label">Users for Break-Even</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">$8.9M</div>
+                    <div class="metric-label">Annual Revenue (Year 3)</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">5.5x</div>
+                    <div class="metric-label">ROI in 3 Years</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 9: Competitive Advantages -->
+    <div class="slide" id="slide9">
+        <div class="slide-content">
+            <div class="slide-number">9/15</div>
+            <h2>🏆 Competitive Advantages</h2>
+            <div class="competitive-advantage">
+                <h3>Why Upflyover Will Win</h3>
+                <div style="text-align: left; margin-top: 20px;">
+                    <ul style="font-size: 1.2rem; line-height: 2;">
+                        <li><strong>🥇 First-Mover Advantage:</strong> No direct competitor in UAE B2B networking space</li>
+                        <li><strong>🎯 Dual Market Approach:</strong> Serves both companies and freelancers (2x market size)</li>
+                        <li><strong>🔒 Enterprise Security:</strong> SOC 2 compliant from day one</li>
+                        <li><strong>🇦🇪 Local Focus:</strong> UAE-specific features (KYC, compliance, Arabic support)</li>
+                        <li><strong>📱 Mobile-First:</strong> Native apps with offline capabilities</li>
+                        <li><strong>🤖 AI-Powered:</strong> Intelligent matching and recommendation engine</li>
+                        <li><strong>💰 Scalable SaaS:</strong> 70%+ profit margins at scale</li>
+                    </ul>
+                </div>
+            </div>
+            <div style="margin-top: 40px;">
+                <h3>Market Timing</h3>
+                <p style="font-size: 1.2rem; line-height: 1.8;">
+                    UAE's Vision 2071 emphasizes digital economy growth, creating perfect timing for B2B platforms. 
+                    Post-COVID acceleration of digital transformation makes this the ideal moment to launch.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 10: Fundraising Timeline -->
+    <div class="slide" id="slide10">
+        <div class="slide-content">
+            <div class="slide-number">10/15</div>
+            <h2>💰 Fundraising Timeline</h2>
+            <div class="competitive-advantage">
+                <h3>🚀 Ready to Scale with Investment</h3>
+                <p style="font-size: 1.2rem; margin-top: 15px;">
+                    We've proven the concept with our own resources. Now we need funding to execute the full vision.
+                </p>
+            </div>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <h4>✅ Bootstrap Phase (Completed - Self-Funded)</h4>
+                    <ul style="margin-top: 10px;">
+                        <li><strong>Investment:</strong> Personal time and resources from 4 co-founders</li>
+                        <li><strong>Achievement:</strong> Full-stack web application developed and tested</li>
+                        <li><strong>Validation:</strong> Market research completed, business model validated</li>
+                        <li><strong>Status:</strong> MVP ready, concept proven, team assembled</li>
+                    </ul>
+                </div>
+                <div class="timeline-item" style="border-left-color: #ff6b35;">
+                    <h4>🎯 Seed Round (Current Need - $2.5M)</h4>
+                    <ul style="margin-top: 10px;">
+                        <li><strong>Target:</strong> Strategic investors, VCs, angel investors</li>
+                        <li><strong>Critical Needs:</strong> UAE business license, legal setup, team salaries</li>
+                        <li><strong>Growth Focus:</strong> Marketing, user acquisition, infrastructure scaling</li>
+                        <li><strong>Equity:</strong> 20-25% for $2.5M investment</li>
+                        <li><strong>Timeline:</strong> 18-month runway to profitability</li>
+                    </ul>
+                </div>
+                <div class="timeline-item" style="border-left-color: #28a745;">
+                    <h4>📈 Series A (Future - Month 18-24)</h4>
+                    <ul style="margin-top: 10px;">
+                        <li><strong>Target:</strong> $8-12M for regional expansion</li>
+                        <li><strong>Use:</strong> GCC expansion, enterprise features, team growth</li>
+                        <li><strong>Prerequisite:</strong> Proven traction and revenue from Seed round</li>
+                        <li><strong>Goal:</strong> 10,000+ users across GCC countries</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="highlight">
+                <h3>💪 Why We Need Funding Now</h3>
+                <div style="text-align: left; margin-top: 20px;">
+                    <ul style="font-size: 1.1rem; line-height: 1.8;">
+                        <li><strong>Legal Foundation:</strong> UAE business license and legal entity setup</li>
+                        <li><strong>Team Scaling:</strong> Full-time developers, marketers, and sales professionals</li>
+                        <li><strong>Market Entry:</strong> Professional marketing and user acquisition campaigns</li>
+                        <li><strong>Infrastructure:</strong> Enterprise-grade hosting, security, and compliance</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="metrics-grid" style="margin-top: 40px;">
+                <div class="metric-card">
+                    <div class="metric-value">$0</div>
+                    <div class="metric-label">External Funding So Far</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">$2.5M</div>
+                    <div class="metric-label">Seed Round Target</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">18</div>
+                    <div class="metric-label">Months to Profitability</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">100%</div>
+                    <div class="metric-label">Founder Commitment</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 11: Go-to-Market Strategy -->
+    <div class="slide" id="slide11">
+        <div class="slide-content">
+            <div class="slide-number">11/15</div>
+            <h2>🚀 Go-to-Market Strategy</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <h4>Phase 1: Foundation (Months 1-6)</h4>
+                    <p><strong>Goal:</strong> 200 users, product-market fit validation</p>
+                    <ul style="margin-top: 10px;">
+                        <li>Launch mobile applications (iOS/Android)</li>
+                        <li>Establish partnerships with 5 major UAE companies</li>
+                        <li>Implement enterprise security features</li>
+                        <li>Build initial user base through direct sales</li>
+                    </ul>
+                </div>
+                
+                <div class="timeline-item">
+                    <h4>Phase 2: Growth (Months 7-12)</h4>
+                    <p><strong>Goal:</strong> 800 users, market penetration</p>
+                    <ul style="margin-top: 10px;">
+                        <li>Launch aggressive digital marketing campaigns</li>
+                        <li>Expand to Abu Dhabi and Sharjah markets</li>
+                        <li>Implement AI-powered matching algorithms</li>
+                        <li>Achieve SOC 2 Type II certification</li>
+                    </ul>
+                </div>
+                
+                <div class="timeline-item">
+                    <h4>Phase 3: Scale (Months 13-18)</h4>
+                    <p><strong>Goal:</strong> 1,500 users, break-even achieved</p>
+                    <ul style="margin-top: 10px;">
+                        <li>Reach break-even point (1,362 users)</li>
+                        <li>Launch enterprise white-label solutions</li>
+                        <li>Expand to other GCC countries</li>
+                        <li>Prepare for Series A funding round</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 12: Hub71 & Abu Dhabi Strategy -->
+    <div class="slide" id="slide12">
+        <div class="slide-content">
+            <div class="slide-number">12/15</div>
+            <h2>🏢 Hub71 & Abu Dhabi Expansion</h2>
+            <div class="competitive-advantage">
+                <h3>🎯 Strategic Partnership with Hub71</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; text-align: left;">
+                    <div>
+                        <h4>Hub71 Benefits</h4>
+                        <ul style="margin-top: 10px; font-size: 1rem;">
+                            <li><strong>Funding Access:</strong> $2B+ ecosystem fund</li>
+                            <li><strong>Corporate Partners:</strong> Direct access to Mubadala portfolio</li>
+                            <li><strong>Mentorship:</strong> Global tech leaders and advisors</li>
+                            <li><strong>Infrastructure:</strong> World-class facilities in ADGM</li>
+                            <li><strong>Regulatory Support:</strong> Streamlined licensing and compliance</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4>Abu Dhabi Market Focus</h4>
+                        <ul style="margin-top: 10px; font-size: 1rem;">
+                            <li><strong>Government Sector:</strong> Large procurement opportunities</li>
+                            <li><strong>Oil & Gas:</strong> Specialized service requirements</li>
+                            <li><strong>Tourism & Hospitality:</strong> Growing service demand</li>
+                            <li><strong>Financial Services:</strong> ADGM fintech ecosystem</li>
+                            <li><strong>Healthcare:</strong> Expanding medical services sector</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <h4>Phase 1: Hub71 Application (Month 6-9)</h4>
+                    <ul style="margin-top: 10px;">
+                        <li>Submit application with proven Dubai traction</li>
+                        <li>Demonstrate 500+ active users and revenue growth</li>
+                        <li>Secure Hub71 partnership and ADGM license</li>
+                    </ul>
+                </div>
+                <div class="timeline-item">
+                    <h4>Phase 2: Abu Dhabi Launch (Month 10-15)</h4>
+                    <ul style="margin-top: 10px;">
+                        <li>Establish Abu Dhabi office within Hub71</li>
+                        <li>Partner with ADCCI for local business network</li>
+                        <li>Target government and enterprise clients</li>
+                    </ul>
+                </div>
+                <div class="timeline-item">
+                    <h4>Phase 3: Ecosystem Integration (Month 16+)</h4>
+                    <ul style="margin-top: 10px;">
+                        <li>Leverage Mubadala portfolio companies as clients</li>
+                        <li>Access Hub71's corporate innovation programs</li>
+                        <li>Scale across UAE with dual-city presence</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="metrics-grid" style="margin-top: 30px;">
+                <div class="metric-card">
+                    <div class="metric-value">$2B+</div>
+                    <div class="metric-label">Hub71 Ecosystem Fund</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">400+</div>
+                    <div class="metric-label">Hub71 Startups</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">50+</div>
+                    <div class="metric-label">Corporate Partners</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">ADGM</div>
+                    <div class="metric-label">Financial Free Zone</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 13: Use of Funds -->
+    <div class="slide" id="slide13">
+        <div class="slide-content">
+            <div class="slide-number">13/15</div>
+            <h2>💰 Use of Funds ($2.5M)</h2>
+            <div class="chart-container">
+                <canvas id="fundsChart"></canvas>
+            </div>
+            <table class="financial-table" style="margin-top: 30px;">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>% of Total</th>
+                        <th>Purpose</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Team & Salaries</strong></td>
+                        <td>$1,512,000</td>
+                        <td>60.5%</td>
+                        <td>12 core team members (18 months)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Marketing & User Acquisition</strong></td>
+                        <td>$540,000</td>
+                        <td>21.6%</td>
+                        <td>Digital advertising, PR, events</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Infrastructure & Technology</strong></td>
+                        <td>$162,000</td>
+                        <td>6.5%</td>
+                        <td>Cloud hosting, security, compliance</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Operations & Legal</strong></td>
+                        <td>$180,000</td>
+                        <td>7.2%</td>
+                        <td>Office, legal, accounting, insurance</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Contingency</strong></td>
+                        <td>$106,000</td>
+                        <td>4.2%</td>
+                        <td>Emergency fund and unexpected expenses</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Slide 14: Team -->
+    <div class="slide" id="slide14">
+        <div class="slide-content">
+            <div class="slide-number">14/15</div>
+            <h2>👥 Our Team</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">15+</div>
+                    <div class="metric-label">Years Combined Experience</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">3</div>
+                    <div class="metric-label">Previous Successful Exits</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">12</div>
+                    <div class="metric-label">Core Team Members</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">100%</div>
+                    <div class="metric-label">UAE Market Knowledge</div>
+                </div>
+            </div>
+            <div class="team-grid">
+                <div class="team-member">
+                    <div style="width: 80px; height: 80px; background: #1e5656; border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; color: white; font-size: 2rem;">👨💼</div>
+                    <h4>CEO & Founder</h4>
+                    <p>8+ years UAE business experience<br>Previous B2B platform success</p>
+                </div>
+                <div class="team-member">
+                    <div style="width: 80px; height: 80px; background: #1e5656; border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; color: white; font-size: 2rem;">👨💻</div>
+                    <h4>CTO & Co-Founder</h4>
+                    <p>10+ years full-stack development<br>Enterprise security expertise</p>
+                </div>
+                <div class="team-member">
+                    <div style="width: 80px; height: 80px; background: #1e5656; border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; color: white; font-size: 2rem;">👩💼</div>
+                    <h4>Head of Sales</h4>
+                    <p>6+ years UAE B2B sales<br>Extensive corporate network</p>
+                </div>
+                <div class="team-member">
+                    <div style="width: 80px; height: 80px; background: #1e5656; border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; color: white; font-size: 2rem;">👨🎨</div>
+                    <h4>Head of Marketing</h4>
+                    <p>5+ years digital marketing<br>MENA region expertise</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 15: Call to Action -->
+    <div class="slide" id="slide15">
+        <div class="slide-content">
+            <div class="slide-number">15/15</div>
+            <h1>🚀 Ready to Transform UAE's B2B Landscape?</h1>
+            <p class="subtitle">Join us in building the region's premier B2B networking platform</p>
+            
+            <div class="metrics-grid" style="margin: 40px 0;">
+                <div class="metric-card">
+                    <div class="metric-value">$2.8B</div>
+                    <div class="metric-label">Market Opportunity</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">20 Months</div>
+                    <div class="metric-label">To Profitability</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">5.5x</div>
+                    <div class="metric-label">3-Year ROI</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">First</div>
+                    <div class="metric-label">Mover Advantage</div>
+                </div>
+            </div>
+
+            <div class="cta-section">
+                <h2>Let's Build the Future Together</h2>
+                <p style="font-size: 1.2rem; margin: 20px 0;">
+                    The UAE B2B market is ready for disruption. We have the team, the plan, and the vision.
+                </p>
+                
+                <div style="margin: 30px 0;">
+                    <button class="cta-button" onclick="window.open('mailto:investors@upflyover.com?subject=Investment Inquiry - Upflyover')">
+                        📧 Contact for Investment
+                    </button>
+                    <button class="cta-button" onclick="window.open('https://calendly.com/upflyover-pitch', '_blank')">
+                        📅 Schedule Pitch Meeting
+                    </button>
+                </div>
+                
+                <div style="margin-top: 30px; font-size: 1.1rem;">
+                    <p><strong>Contact Information:</strong></p>
+                    <p>📧 investors@upflyover.com | 📱 +971 50 XXX XXXX</p>
+                    <p>🏢 Dubai International Financial Centre (DIFC), UAE</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="navigation">
+        <button class="nav-btn active" onclick="goToSlide(1)">1</button>
+        <button class="nav-btn" onclick="goToSlide(2)">2</button>
+        <button class="nav-btn" onclick="goToSlide(3)">3</button>
+        <button class="nav-btn" onclick="goToSlide(4)">4</button>
+        <button class="nav-btn" onclick="goToSlide(5)">5</button>
+        <button class="nav-btn" onclick="goToSlide(6)">6</button>
+        <button class="nav-btn" onclick="goToSlide(7)">7</button>
+        <button class="nav-btn" onclick="goToSlide(8)">8</button>
+        <button class="nav-btn" onclick="goToSlide(9)">9</button>
+        <button class="nav-btn" onclick="goToSlide(10)">10</button>
+        <button class="nav-btn" onclick="goToSlide(11)">11</button>
+        <button class="nav-btn" onclick="goToSlide(12)">12</button>
+        <button class="nav-btn" onclick="goToSlide(13)">13</button>
+        <button class="nav-btn" onclick="goToSlide(14)">14</button>
+        <button class="nav-btn" onclick="goToSlide(15)">15</button>
+        <button class="nav-btn" onclick="previousSlide()">←</button>
+        <button class="nav-btn" onclick="nextSlide()">→</button>
+    </div>
+
+    <script>
+        let currentSlide = 1;
+        const totalSlides = 15;
+
+        function goToSlide(slideNumber) {
+            // Hide current slide
+            document.getElementById(`slide${currentSlide}`).style.display = 'none';
+            
+            // Show new slide
+            document.getElementById(`slide${slideNumber}`).style.display = 'flex';
+            
+            // Update navigation
+            document.querySelectorAll('.nav-btn').forEach((btn, index) => {
+                if (index < totalSlides) {
+                    btn.classList.toggle('active', index + 1 === slideNumber);
+                }
+            });
+            
+            currentSlide = slideNumber;
+            
+            // Initialize charts if needed
+            if (slideNumber === 13) {
+                createFundsChart();
+            }
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides) {
+                goToSlide(currentSlide + 1);
+            }
+        }
+
+        function previousSlide() {
+            if (currentSlide > 1) {
+                goToSlide(currentSlide - 1);
+            }
+        }
+
+        function createFundsChart() {
+            const ctx = document.getElementById('fundsChart');
+            if (!ctx) return;
+            
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Team & Salaries', 'Marketing & User Acquisition', 'Operations & Legal', 'Infrastructure & Technology', 'Contingency'],
+                    datasets: [{
+                        data: [1512000, 540000, 180000, 162000, 106000],
+                        backgroundColor: [
+                            '#1e5656',
+                            '#ff6b35',
+                            '#28a745',
+                            '#36A2EB',
+                            '#FFCE56'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Hide all slides except the first
+            for (let i = 2; i <= totalSlides; i++) {
+                document.getElementById(`slide${i}`).style.display = 'none';
+            }
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                previousSlide();
+            }
+        });
+
+        // Touch/swipe support for mobile
+        let startX = 0;
+        let endX = 0;
+
+        document.addEventListener('touchstart', function(e) {
+            startX = e.changedTouches[0].screenX;
+        });
+
+        document.addEventListener('touchend', function(e) {
+            endX = e.changedTouches[0].screenX;
+            handleSwipe();
+        });
+
+        function handleSwipe() {
+            if (endX < startX - 50) {
+                nextSlide(); // Swipe left - next slide
+            }
+            if (endX > startX + 50) {
+                previousSlide(); // Swipe right - previous slide
+            }
+        }
+    </script>
+</body>
+</html>

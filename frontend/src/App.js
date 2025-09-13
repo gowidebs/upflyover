@@ -41,6 +41,10 @@ import IndividualSignup from './pages/IndividualSignup';
 import UserTypeSelection from './pages/UserTypeSelection';
 import IndividualVerification from './pages/IndividualVerification';
 import IndividualEmailVerify from './pages/IndividualEmailVerify';
+import PaymentSuccess from './pages/PaymentSuccess';
+import CompanyDetails from './pages/CompanyDetails';
+import Notifications from './pages/Notifications';
+import Search from './pages/Search';
 import { AuthProvider } from './contexts/AuthContext';
 import Footer from './components/Footer';
 
@@ -109,6 +113,7 @@ function App() {
               <Route path="/verify-individual-email" element={<IndividualEmailVerify />} />
               <Route path="/user-type-selection" element={<UserTypeSelection />} />
               <Route path="/individual-verification" element={<IndividualVerification />} />
+              <Route path="/payment/success" element={<PaymentSuccess />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/verify-otp" element={<VerifyOTP />} />
@@ -120,6 +125,9 @@ function App() {
               <Route path="/admin/kyc" element={<AdminKYC />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/companies" element={<Companies />} />
+              <Route path="/companies/:id" element={<CompanyDetails />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/search" element={<Search />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/pricing" element={<Pricing />} />

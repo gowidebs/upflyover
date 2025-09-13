@@ -1,24 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Container, Typography, Grid, Card, CardContent, Box,
   TextField, Button, Chip, Stack, Dialog, DialogTitle,
   DialogContent, DialogActions, FormControl, InputLabel,
   Select, MenuItem, Alert, Fab, IconButton, Avatar,
   Divider, List, ListItem, ListItemText, ListItemAvatar,
-  Badge, Tab, Tabs, Paper
+  Badge, Tab, Tabs, Paper, InputAdornment, Autocomplete
 } from '@mui/material';
 import {
   Add, Search, FilterList, Business, LocationOn,
-  AccessTime, AttachMoney, Send, Visibility, Edit, Delete
+  AccessTime, AttachMoney, Send, Visibility, Edit, Delete,
+  TuneRounded, AttachFile, GetApp
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import api from '../utils/api';
+import { useErrorHandler } from '../hooks/useErrorHandler';
+import { t } from '../utils/i18n';
+import MessageButton from '../components/MessageButton';
+import SearchBar from '../components/SearchBar';
 
 const Requirements = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { error, loading, handleError, clearError, executeAsync } = useErrorHandler();
   const [requirements, setRequirements] = useState([]);
   const [myRequirements, setMyRequirements] = useState([]);
   const [applications, setApplications] = useState([]);
@@ -26,12 +32,13 @@ const Requirements = () => {
   const [postDialog, setPostDialog] = useState(false);
   const [applyDialog, setApplyDialog] = useState(false);
   const [selectedRequirement, setSelectedRequirement] = useState(null);
+  const [availableFilters, setAvailableFilters] = useState({ categories: [], locations: [] });
 
   const [filters, setFilters] = useState({
-    category: '',
-    location: '',
-    budget: '',
-    search: ''
+    category: searchParams.get('category') || '',
+    location: searchParams.get('location') || '',
+    budget: searchParams.get('budget') || '',
+    search: searchParams.get('q') || ''
   });
 
   const [newRequirement, setNewRequirement] = useState({
@@ -55,12 +62,12 @@ const Requirements = () => {
     portfolio: ''
   });
 
-  const categories = [
+  const categories = useMemo(() => [
     'Web Development', 'Mobile App Development', 'Digital Marketing',
     'Graphic Design', 'Content Writing', 'SEO Services',
     'Software Development', 'Consulting', 'Legal Services',
     'Accounting', 'HR Services', 'IT Support', 'Other'
-  ];
+  ], []);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -70,18 +77,48 @@ const Requirements = () => {
     loadRequirements();
     loadMyRequirements();
     loadApplications();
+    loadFilters();
   }, [isAuthenticated, navigate]);
-
-  const loadRequirements = async () => {
+  
+  useEffect(() => {
+    const delayedSearch = setTimeout(() => {
+      loadRequirements();
+      updateURL();
+    }, 500);
+    
+    return () => clearTimeout(delayedSearch);
+  }, [filters]);
+  
+  const updateURL = () => {
+    const params = new URLSearchParams();
+    if (filters.search) params.set('q', filters.search);
+    if (filters.category) params.set('category', filters.category);
+    if (filters.location) params.set('location', filters.location);
+    if (filters.budget) params.set('budget', filters.budget);
+    setSearchParams(params);
+  };
+  
+  const loadFilters = async () => {
     try {
-      const response = await axios.get('/api/requirements', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      setRequirements(response.data.requirements || []);
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/search/filters`);
+      setAvailableFilters(response.data);
     } catch (error) {
-      console.error('Error loading requirements:', error);
+      console.error('Error loading filters:', error);
     }
   };
+
+  const loadRequirements = useCallback(async () => {
+    await executeAsync(async () => {
+      const params = new URLSearchParams();
+      if (filters.search) params.append('search', filters.search);
+      if (filters.category) params.append('category', filters.category);
+      if (filters.location) params.append('location', filters.location);
+      if (filters.budget) params.append('budget', filters.budget);
+      
+      const response = await api.get(`/api/requirements?${params}`);
+      setRequirements(response.data.requirements || []);
+    });
+  }, [filters, executeAsync]);
 
   const loadMyRequirements = async () => {
     try {
@@ -198,14 +235,8 @@ const Requirements = () => {
     }
   };
 
-  const filteredRequirements = requirements.filter(req => {
-    return (
-      (!filters.category || req.category === filters.category) &&
-      (!filters.location || req.location.toLowerCase().includes(filters.location.toLowerCase())) &&
-      (!filters.search || req.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-       req.description.toLowerCase().includes(filters.search.toLowerCase()))
-    );
-  });
+  // Remove client-side filtering since we're doing server-side filtering
+  const filteredRequirements = requirements;
 
   const formatBudget = (budget) => {
     if (!budget) return 'Budget not specified';
@@ -227,85 +258,162 @@ const Requirements = () => {
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Typography variant="h4" fontWeight="bold">
-          Business Requirements
+          {t('requirements')}
         </Typography>
         <Button
           variant="contained"
           startIcon={<Add />}
           onClick={() => setPostDialog(true)}
         >
-          Post Requirement
+          {t('postRequirement')}
         </Button>
       </Box>
 
       {/* Tabs */}
       <Paper sx={{ mb: 3 }}>
         <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
-          <Tab label="Browse Requirements" />
-          <Tab label="My Requirements" />
-          <Tab label="My Applications" />
+          <Tab label={t('browseRequirements')} />
+          <Tab label={t('myRequirements')} />
+          <Tab label={t('myApplications')} />
         </Tabs>
       </Paper>
 
+      {/* Error Display */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={clearError}>
+          {error}
+        </Alert>
+      )}
+      
       {/* Browse Requirements Tab */}
       {tabValue === 0 && (
         <>
-          {/* Filters */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Grid container spacing={2} alignItems="center">
-                <Grid item xs={12} md={3}>
-                  <TextField
-                    fullWidth
-                    placeholder="Search requirements..."
-                    value={filters.search}
-                    onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                    InputProps={{
-                      startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <FormControl fullWidth>
-                    <InputLabel>Category</InputLabel>
-                    <Select
-                      value={filters.category}
-                      onChange={(e) => setFilters(prev => ({ ...prev, category: e.target.value }))}
-                    >
-                      <MenuItem value="">All Categories</MenuItem>
-                      {categories.map(cat => (
-                        <MenuItem key={cat} value={cat}>{cat}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <TextField
-                    fullWidth
-                    label="Location"
-                    value={filters.location}
-                    onChange={(e) => setFilters(prev => ({ ...prev, location: e.target.value }))}
-                  />
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<FilterList />}
-                    onClick={() => setFilters({ category: '', location: '', budget: '', search: '' })}
-                  >
-                    Clear Filters
-                  </Button>
-                </Grid>
+          {/* Advanced Search & Filters */}
+          <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              {t('searchRequirements')}
+            </Typography>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} md={4}>
+                <SearchBar
+                  placeholder={t('searchRequirements')}
+                  onSearch={(query) => setFilters(prev => ({ ...prev, search: query }))}
+                  value={filters.search}
+                  fullWidth
+                />
               </Grid>
-            </CardContent>
-          </Card>
+              <Grid item xs={12} md={2}>
+                <Autocomplete
+                  options={availableFilters.categories || []}
+                  value={filters.category}
+                  onChange={(e, value) => setFilters(prev => ({ ...prev, category: value || '' }))}
+                  renderInput={(params) => (
+                    <TextField {...params} label={t('category')} size="small" />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <TextField
+                  fullWidth
+                  label={t('location')}
+                  value={filters.location}
+                  onChange={(e) => setFilters(prev => ({ ...prev, location: e.target.value }))}
+                  size="small"
+                />
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>{t('budget')}</InputLabel>
+                  <Select
+                    value={filters.budget}
+                    onChange={(e) => setFilters(prev => ({ ...prev, budget: e.target.value }))}
+                  >
+                    <MenuItem value="">{t('anyBudget')}</MenuItem>
+                    <MenuItem value="0-1000">Under $1,000</MenuItem>
+                    <MenuItem value="1000-5000">$1,000 - $5,000</MenuItem>
+                    <MenuItem value="5000-10000">$5,000 - $10,000</MenuItem>
+                    <MenuItem value="10000">$10,000+</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<TuneRounded />}
+                  onClick={() => {
+                    setFilters({ category: '', location: '', budget: '', search: '' });
+                    setSearchParams({});
+                  }}
+                  size="small"
+                >
+                  Clear
+                </Button>
+              </Grid>
+            </Grid>
+            
+            {/* Active Filters */}
+            {(filters.search || filters.category || filters.location || filters.budget) && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  {t('activeFilters')}:
+                </Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  {filters.search && (
+                    <Chip 
+                      label={`Search: "${filters.search}"`} 
+                      onDelete={() => setFilters(prev => ({ ...prev, search: '' }))}
+                      size="small"
+                    />
+                  )}
+                  {filters.category && (
+                    <Chip 
+                      label={`Category: ${filters.category}`} 
+                      onDelete={() => setFilters(prev => ({ ...prev, category: '' }))}
+                      size="small"
+                    />
+                  )}
+                  {filters.location && (
+                    <Chip 
+                      label={`Location: ${filters.location}`} 
+                      onDelete={() => setFilters(prev => ({ ...prev, location: '' }))}
+                      size="small"
+                    />
+                  )}
+                  {filters.budget && (
+                    <Chip 
+                      label={`Budget: ${filters.budget}`} 
+                      onDelete={() => setFilters(prev => ({ ...prev, budget: '' }))}
+                      size="small"
+                    />
+                  )}
+                </Stack>
+              </Box>
+            )}
+          </Paper>
 
+          {/* Results Count */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body1" color="text.secondary">
+              {loading ? t('loading') : `${t('found')} ${filteredRequirements.length} ${t('requirements').toLowerCase()}`}
+            </Typography>
+          </Box>
+          
           {/* Requirements List */}
           <Grid container spacing={3}>
-            {filteredRequirements.length === 0 ? (
+            {loading ? (
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <Typography>Loading requirements...</Typography>
+                </Box>
+              </Grid>
+            ) : filteredRequirements.length === 0 ? (
               <Grid item xs={12}>
                 <Alert severity="info">
-                  No requirements found. Be the first to post a requirement!
+                  {filters.search || filters.category || filters.location || filters.budget 
+                    ? 'No requirements match your search criteria. Try adjusting your filters.'
+                    : 'No requirements found. Be the first to post a requirement!'
+                  }
                 </Alert>
               </Grid>
             ) : (
@@ -351,7 +459,27 @@ const Requirements = () => {
                         )}
                       </Stack>
                       
-                      {/* File attachments will be added later */}
+                      {/* File Attachments */}
+                      {req.attachments && req.attachments.length > 0 && (
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                            Attachments:
+                          </Typography>
+                          <Stack direction="row" spacing={1} flexWrap="wrap">
+                            {req.attachments.map((file, index) => (
+                              <Chip
+                                key={index}
+                                icon={<AttachFile />}
+                                label={file.originalName}
+                                size="small"
+                                onClick={() => downloadAttachment(req.id, file.filename, file.originalName)}
+                                clickable
+                                variant="outlined"
+                              />
+                            ))}
+                          </Stack>
+                        </Box>
+                      )}
                       
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                         <Typography variant="body2" color="text.secondary">
@@ -376,17 +504,26 @@ const Requirements = () => {
                           </Typography>
                         </Box>
                         
-                        <Button
-                          variant="contained"
-                          size="small"
-                          startIcon={<Send />}
-                          onClick={() => {
-                            setSelectedRequirement(req);
-                            setApplyDialog(true);
-                          }}
-                        >
-                          Apply
-                        </Button>
+                        <Stack direction="row" spacing={1}>
+                          <MessageButton
+                            recipientId={req.userId}
+                            recipientName={req.posterName}
+                            variant="outlined"
+                            size="small"
+                            sx={{ minWidth: 'auto' }}
+                          />
+                          <Button
+                            variant="contained"
+                            size="small"
+                            startIcon={<Send />}
+                            onClick={() => {
+                              setSelectedRequirement(req);
+                              setApplyDialog(true);
+                            }}
+                          >
+                            Apply
+                          </Button>
+                        </Stack>
                       </Box>
                     </CardContent>
                   </Card>
@@ -558,7 +695,52 @@ const Requirements = () => {
               />
             </Grid>
             
-            {/* File attachments will be added in next update */}
+            {/* File Attachments */}
+            <Grid item xs={12}>
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  Attachments (Optional)
+                </Typography>
+                <input
+                  type="file"
+                  multiple
+                  onChange={handleFileChange}
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt,.zip,.rar"
+                  style={{ display: 'none' }}
+                  id="file-upload"
+                />
+                <label htmlFor="file-upload">
+                  <Button
+                    variant="outlined"
+                    component="span"
+                    startIcon={<AttachFile />}
+                    size="small"
+                  >
+                    Add Files
+                  </Button>
+                </label>
+                
+                {attachments.length > 0 && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Selected files:
+                    </Typography>
+                    <Stack spacing={1}>
+                      {attachments.map((file, index) => (
+                        <Box key={index} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <Typography variant="body2">
+                            {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                          </Typography>
+                          <IconButton size="small" onClick={() => removeAttachment(index)}>
+                            <Delete />
+                          </IconButton>
+                        </Box>
+                      ))}
+                    </Stack>
+                  </Box>
+                )}
+              </Box>
+            </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>

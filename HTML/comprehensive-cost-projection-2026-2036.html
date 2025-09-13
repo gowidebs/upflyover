@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upflyover - Comprehensive 10-Year Cost Projection (2026-2036)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e5656 0%, #2d7d7d 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            color: #1e5656;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        
+        .year-selector {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .year-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        
+        .year-btn {
+            background: #1e5656;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .year-btn:hover {
+            background: #2d7d7d;
+            transform: scale(1.05);
+        }
+        
+        .year-btn.active {
+            background: #ff6b35;
+            box-shadow: 0 3px 15px rgba(255, 107, 53, 0.3);
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .metric-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #1e5656;
+            margin-bottom: 10px;
+        }
+        
+        .metric-label {
+            color: #666;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .chart-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .chart-title {
+            font-size: 1.5rem;
+            color: #1e5656;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .breakdown-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .breakdown-table th,
+        .breakdown-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .breakdown-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+            color: #1e5656;
+        }
+        
+        .profit-positive {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .cost-item {
+            color: #dc3545;
+        }
+        
+        .revenue-item {
+            color: #28a745;
+        }
+        
+        .category-header {
+            background: #e9ecef !important;
+            font-weight: bold;
+            color: #495057 !important;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .year-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 Upflyover - Comprehensive 10-Year Projection</h1>
+        <p>Realistic operational costs including cybersecurity, staff, mobile apps & full enterprise operations (2026-2036)</p>
+    </div>
+
+    <div class="container">
+        <div class="warning">
+            <strong>⚠️ Enterprise-Grade Operations:</strong> This projection includes realistic costs for cybersecurity, 24/7 monitoring, mobile apps, dedicated staff, compliance, and full operational infrastructure required for a production B2B platform.
+        </div>
+
+        <div class="year-selector">
+            <h3>Select Year & User Scale</h3>
+            <div class="year-buttons">
+                <button class="year-btn active" onclick="updateDashboard(0)">2026 - 1K Users</button>
+                <button class="year-btn" onclick="updateDashboard(1)">2027 - 5K Users</button>
+                <button class="year-btn" onclick="updateDashboard(2)">2028 - 15K Users</button>
+                <button class="year-btn" onclick="updateDashboard(3)">2029 - 35K Users</button>
+                <button class="year-btn" onclick="updateDashboard(4)">2030 - 75K Users</button>
+                <button class="year-btn" onclick="updateDashboard(5)">2031 - 150K Users</button>
+                <button class="year-btn" onclick="updateDashboard(6)">2032 - 300K Users</button>
+                <button class="year-btn" onclick="updateDashboard(7)">2033 - 500K Users</button>
+                <button class="year-btn" onclick="updateDashboard(8)">2034 - 750K Users</button>
+                <button class="year-btn" onclick="updateDashboard(9)">2035 - 1M Users</button>
+                <button class="year-btn" onclick="updateDashboard(10)">2036 - 1.5M Users</button>
+            </div>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-value" id="totalUsers">1,000</div>
+                <div class="metric-label">Total Users</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="monthlyRevenue">$99,000</div>
+                <div class="metric-label">Monthly Revenue</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="monthlyCosts">$47,500</div>
+                <div class="metric-label">Monthly Costs</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="netProfit">$51,500</div>
+                <div class="metric-label">Net Profit</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="profitMargin">52.02%</div>
+                <div class="metric-label">Profit Margin</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="staffCount">8</div>
+                <div class="metric-label">Staff Count</div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h3 class="chart-title">Revenue vs Costs vs Profit</h3>
+                <canvas id="revenueChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3 class="chart-title">Cost Distribution</h3>
+                <canvas id="costChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h3 class="chart-title">10-Year Growth Projection (2026-2036)</h3>
+            <canvas id="growthChart"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h3 class="chart-title">Comprehensive Cost Breakdown</h3>
+            <table class="breakdown-table">
+                <thead>
+                    <tr>
+                        <th>Category / Service</th>
+                        <th>Monthly Cost</th>
+                        <th>Annual Cost</th>
+                        <th>% of Total</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody id="costBreakdown">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const yearlyData = [
+            {
+                year: 2026,
+                users: 1000,
+                revenue: 99000,
+                staffCount: 8,
+                costs: {
+                    // Infrastructure & Hosting
+                    'Vercel Pro': 20,
+                    'Railway Pro': 50,
+                    'MongoDB Atlas M30': 150,
+                    'AWS S3/CloudFront': 100,
+                    'CDN & Edge Computing': 200,
+                    
+                    // Security & Compliance
+                    'Cloudflare Security': 200,
+                    'Security Monitoring (Datadog)': 300,
+                    'SSL Certificates': 50,
+                    'Penetration Testing': 500,
+                    'Compliance Audits': 1000,
+                    'Backup & Disaster Recovery': 300,
+                    
+                    // Third-Party Services
+                    'Stripe Processing (2.9%)': 2871,
+                    'Twilio SMS/Voice': 200,
+                    'SendGrid Email': 100,
+                    'Apple Developer': 8,
+                    'Google Play Console': 2,
+                    
+                    // Mobile Applications
+                    'iOS App Store Fees': 100,
+                    'Android Play Store Fees': 50,
+                    'Mobile Push Notifications': 100,
+                    'Mobile Analytics': 150,
+                    
+                    // Staff Salaries (UAE Market)
+                    'CTO/Lead Developer': 12000,
+                    'Full-Stack Developer (2x)': 14000,
+                    'DevOps Engineer': 8000,
+                    'UI/UX Designer': 6000,
+                    'Customer Support (2x)': 8000,
+                    'Marketing Manager': 7000,
+                    
+                    // Operations & Legal
+                    'Legal & Compliance': 2000,
+                    'Accounting & Finance': 1500,
+                    'Office Rent (Dubai)': 3000,
+                    'Insurance & Licenses': 500,
+                    'Marketing & Advertising': 5000,
+                    
+                    // Tools & Software
+                    'Development Tools': 500,
+                    'Design Software': 200,
+                    'Project Management': 100,
+                    'Communication Tools': 150,
+                    'Analytics & Monitoring': 300
+                }
+            },
+            {
+                year: 2027,
+                users: 5000,
+                revenue: 495000,
+                staffCount: 12,
+                costs: {
+                    'Vercel Pro': 50,
+                    'Railway Pro': 150,
+                    'MongoDB Atlas M50': 400,
+                    'AWS S3/CloudFront': 300,
+                    'CDN & Edge Computing': 500,
+                    'Cloudflare Security': 400,
+                    'Security Monitoring': 500,
+                    'SSL Certificates': 100,
+                    'Penetration Testing': 750,
+                    'Compliance Audits': 1500,
+                    'Backup & Disaster Recovery': 600,
+                    'Stripe Processing (2.9%)': 14355,
+                    'Twilio SMS/Voice': 500,
+                    'SendGrid Email': 200,
+                    'Apple Developer': 8,
+                    'Google Play Console': 2,
+                    'iOS App Store Fees': 200,
+                    'Android Play Store Fees': 100,
+                    'Mobile Push Notifications': 200,
+                    'Mobile Analytics': 300,
+                    'CTO/Lead Developer': 15000,
+                    'Full-Stack Developer (3x)': 21000,
+                    'DevOps Engineer': 10000,
+                    'UI/UX Designer': 8000,
+                    'Customer Support (3x)': 12000,
+                    'Marketing Manager': 9000,
+                    'Sales Manager': 8000,
+                    'QA Engineer': 6000,
+                    'Legal & Compliance': 3000,
+                    'Accounting & Finance': 2000,
+                    'Office Rent (Dubai)': 5000,
+                    'Insurance & Licenses': 800,
+                    'Marketing & Advertising': 15000,
+                    'Development Tools': 800,
+                    'Design Software': 300,
+                    'Project Management': 200,
+                    'Communication Tools': 250,
+                    'Analytics & Monitoring': 500
+                }
+            },
+            {
+                year: 2028,
+                users: 15000,
+                revenue: 1485000,
+                staffCount: 18,
+                costs: {
+                    'Vercel Pro': 100,
+                    'Railway Pro': 400,
+                    'MongoDB Atlas M60': 800,
+                    'AWS S3/CloudFront': 800,
+                    'CDN & Edge Computing': 1200,
+                    'Cloudflare Security': 800,
+                    'Security Monitoring': 1000,
+                    'SSL Certificates': 150,
+                    'Penetration Testing': 1000,
+                    'Compliance Audits': 2000,
+                    'Backup & Disaster Recovery': 1000,
+                    'Stripe Processing (2.9%)': 43065,
+                    'Twilio SMS/Voice': 1200,
+                    'SendGrid Email': 400,
+                    'Apple Developer': 8,
+                    'Google Play Console': 2,
+                    'iOS App Store Fees': 500,
+                    'Android Play Store Fees': 300,
+                    'Mobile Push Notifications': 400,
+                    'Mobile Analytics': 600,
+                    'CTO/Lead Developer': 18000,
+                    'Senior Developer (2x)': 24000,
+                    'Full-Stack Developer (3x)': 24000,
+                    'DevOps Engineer (2x)': 16000,
+                    'UI/UX Designer (2x)': 12000,
+                    'Customer Support (4x)': 16000,
+                    'Marketing Manager': 12000,
+                    'Sales Manager (2x)': 16000,
+                    'QA Engineer (2x)': 12000,
+                    'Product Manager': 15000,
+                    'Legal & Compliance': 4000,
+                    'Accounting & Finance': 3000,
+                    'Office Rent (Dubai)': 8000,
+                    'Insurance & Licenses': 1200,
+                    'Marketing & Advertising': 30000,
+                    'Development Tools': 1200,
+                    'Design Software': 500,
+                    'Project Management': 300,
+                    'Communication Tools': 400,
+                    'Analytics & Monitoring': 800
+                }
+            },
+            {
+                year: 2029,
+                users: 35000,
+                revenue: 3465000,
+                staffCount: 25,
+                costs: {
+                    'Vercel Enterprise': 500,
+                    'Railway Enterprise': 1000,
+                    'MongoDB Atlas M80': 1500,
+                    'AWS S3/CloudFront': 2000,
+                    'CDN & Edge Computing': 3000,
+                    'Cloudflare Security': 1500,
+                    'Security Monitoring': 2000,
+                    'SSL Certificates': 200,
+                    'Penetration Testing': 1500,
+                    'Compliance Audits': 3000,
+                    'Backup & Disaster Recovery': 2000,
+                    'Stripe Processing (2.9%)': 100485,
+                    'Twilio SMS/Voice': 3000,
+                    'SendGrid Email': 800,
+                    'Apple Developer': 8,
+                    'Google Play Console': 2,
+                    'iOS App Store Fees': 1000,
+                    'Android Play Store Fees': 600,
+                    'Mobile Push Notifications': 800,
+                    'Mobile Analytics': 1200,
+                    'CTO/Lead Developer': 22000,
+                    'Senior Developer (3x)': 36000,
+                    'Full-Stack Developer (4x)': 32000,
+                    'DevOps Engineer (3x)': 24000,
+                    'UI/UX Designer (2x)': 16000,
+                    'Customer Support (6x)': 24000,
+                    'Marketing Manager (2x)': 20000,
+                    'Sales Manager (3x)': 24000,
+                    'QA Engineer (3x)': 18000,
+                    'Product Manager (2x)': 30000,
+                    'Data Analyst': 10000,
+                    'Security Engineer': 15000,
+                    'Legal & Compliance': 6000,
+                    'Accounting & Finance': 5000,
+                    'Office Rent (Dubai)': 12000,
+                    'Insurance & Licenses': 2000,
+                    'Marketing & Advertising': 60000,
+                    'Development Tools': 2000,
+                    'Design Software': 800,
+                    'Project Management': 500,
+                    'Communication Tools': 600,
+                    'Analytics & Monitoring': 1500
+                }
+            },
+            {
+                year: 2030,
+                users: 75000,
+                revenue: 7425000,
+                staffCount: 35,
+                costs: {
+                    'Vercel Enterprise': 1000,
+                    'Railway Enterprise': 2000,
+                    'MongoDB Atlas M140': 3000,
+                    'AWS S3/CloudFront': 4000,
+                    'CDN & Edge Computing': 6000,
+                    'Cloudflare Security': 3000,
+                    'Security Monitoring': 4000,
+                    'SSL Certificates': 300,
+                    'Penetration Testing': 2000,
+                    'Compliance Audits': 5000,
+                    'Backup & Disaster Recovery': 4000,
+                    'Stripe Processing (2.9%)': 215325,
+                    'Twilio SMS/Voice': 6000,
+                    'SendGrid Email': 1500,
+                    'Apple Developer': 8,
+                    'Google Play Console': 2,
+                    'iOS App Store Fees': 2000,
+                    'Android Play Store Fees': 1200,
+                    'Mobile Push Notifications': 1500,
+                    'Mobile Analytics': 2500,
+                    'CTO/Lead Developer': 25000,
+                    'Senior Developer (5x)': 60000,
+                    'Full-Stack Developer (6x)': 48000,
+                    'DevOps Engineer (4x)': 32000,
+                    'UI/UX Designer (3x)': 24000,
+                    'Customer Support (8x)': 32000,
+                    'Marketing Manager (3x)': 30000,
+                    'Sales Manager (5x)': 40000,
+                    'QA Engineer (4x)': 24000,
+                    'Product Manager (3x)': 45000,
+                    'Data Analyst (2x)': 20000,
+                    'Security Engineer (2x)': 30000,
+                    'HR Manager': 12000,
+                    'Operations Manager': 15000,
+                    'Legal & Compliance': 8000,
+                    'Accounting & Finance': 8000,
+                    'Office Rent (Dubai)': 18000,
+                    'Insurance & Licenses': 3000,
+                    'Marketing & Advertising': 120000,
+                    'Development Tools': 3000,
+                    'Design Software': 1200,
+                    'Project Management': 800,
+                    'Communication Tools': 1000,
+                    'Analytics & Monitoring': 3000
+                }
+            },
+            {
+                year: 2031,
+                users: 150000,
+                revenue: 14850000,
+                staffCount: 50,
+                costs: {
+                    'Multi-Cloud Infrastructure': 15000,
+                    'Database Cluster': 8000,
+                    'CDN & Edge Computing': 12000,
+                    'Enterprise Security Suite': 8000,
+                    'SOC 2 Compliance': 10000,
+                    'Stripe Processing (2.9%)': 430650,
+                    'Communication Services': 12000,
+                    'Mobile Infrastructure': 8000,
+                    'Executive Team (4x)': 120000,
+                    'Engineering Team (20x)': 200000,
+                    'Product Team (8x)': 80000,
+                    'Sales & Marketing (12x)': 120000,
+                    'Operations Team (6x)': 60000,
+                    'Corporate Operations': 50000,
+                    'Marketing & Growth': 200000,
+                    'Enterprise Tools': 10000
+                }
+            },
+            {
+                year: 2032,
+                users: 300000,
+                revenue: 29700000,
+                staffCount: 75,
+                costs: {
+                    'Multi-Cloud Infrastructure': 25000,
+                    'Database Cluster': 15000,
+                    'CDN & Edge Computing': 20000,
+                    'Enterprise Security Suite': 15000,
+                    'SOC 2 Compliance': 15000,
+                    'Stripe Processing (2.9%)': 861300,
+                    'Communication Services': 20000,
+                    'Mobile Infrastructure': 15000,
+                    'Executive Team (6x)': 180000,
+                    'Engineering Team (35x)': 350000,
+                    'Product Team (12x)': 120000,
+                    'Sales & Marketing (18x)': 180000,
+                    'Operations Team (10x)': 100000,
+                    'Corporate Operations': 80000,
+                    'Marketing & Growth': 350000,
+                    'Enterprise Tools': 18000
+                }
+            },
+            {
+                year: 2033,
+                users: 500000,
+                revenue: 49500000,
+                staffCount: 100,
+                costs: {
+                    'Multi-Cloud Infrastructure': 40000,
+                    'Database Cluster': 25000,
+                    'CDN & Edge Computing': 30000,
+                    'Enterprise Security Suite': 25000,
+                    'SOC 2 Compliance': 20000,
+                    'Stripe Processing (2.9%)': 1435500,
+                    'Communication Services': 30000,
+                    'Mobile Infrastructure': 25000,
+                    'Executive Team (8x)': 240000,
+                    'Engineering Team (50x)': 500000,
+                    'Product Team (15x)': 150000,
+                    'Sales & Marketing (25x)': 250000,
+                    'Operations Team (15x)': 150000,
+                    'Corporate Operations': 120000,
+                    'Marketing & Growth': 500000,
+                    'Enterprise Tools': 25000
+                }
+            },
+            {
+                year: 2034,
+                users: 750000,
+                revenue: 74250000,
+                staffCount: 130,
+                costs: {
+                    'Multi-Cloud Infrastructure': 60000,
+                    'Database Cluster': 35000,
+                    'CDN & Edge Computing': 45000,
+                    'Enterprise Security Suite': 35000,
+                    'SOC 2 Compliance': 30000,
+                    'Stripe Processing (2.9%)': 2153250,
+                    'Communication Services': 45000,
+                    'Mobile Infrastructure': 35000,
+                    'Executive Team (10x)': 300000,
+                    'Engineering Team (65x)': 650000,
+                    'Product Team (20x)': 200000,
+                    'Sales & Marketing (30x)': 300000,
+                    'Operations Team (20x)': 200000,
+                    'Corporate Operations': 180000,
+                    'Marketing & Growth': 750000,
+                    'Enterprise Tools': 35000
+                }
+            },
+            {
+                year: 2035,
+                users: 1000000,
+                revenue: 99000000,
+                staffCount: 150,
+                costs: {
+                    'Multi-Cloud Infrastructure': 80000,
+                    'Database Cluster': 50000,
+                    'CDN & Edge Computing': 60000,
+                    'Enterprise Security Suite': 50000,
+                    'SOC 2 Compliance': 40000,
+                    'Stripe Processing (2.9%)': 2871000,
+                    'Communication Services': 60000,
+                    'Mobile Infrastructure': 50000,
+                    'Executive Team (12x)': 360000,
+                    'Engineering Team (75x)': 750000,
+                    'Product Team (25x)': 250000,
+                    'Sales & Marketing (35x)': 350000,
+                    'Operations Team (25x)': 250000,
+                    'Corporate Operations': 250000,
+                    'Marketing & Growth': 1000000,
+                    'Enterprise Tools': 50000
+                }
+            },
+            {
+                year: 2036,
+                users: 1500000,
+                revenue: 148500000,
+                staffCount: 200,
+                costs: {
+                    'Multi-Cloud Infrastructure': 120000,
+                    'Database Cluster': 75000,
+                    'CDN & Edge Computing': 90000,
+                    'Enterprise Security Suite': 75000,
+                    'SOC 2 Compliance': 60000,
+                    'Stripe Processing (2.9%)': 4306500,
+                    'Communication Services': 90000,
+                    'Mobile Infrastructure': 75000,
+                    'Executive Team (15x)': 450000,
+                    'Engineering Team (100x)': 1000000,
+                    'Product Team (30x)': 300000,
+                    'Sales & Marketing (50x)': 500000,
+                    'Operations Team (35x)': 350000,
+                    'Corporate Operations': 400000,
+                    'Marketing & Growth': 1500000,
+                    'Enterprise Tools': 75000
+                }
+            }
+        ];
+
+        let currentYearIndex = 0;
+        let revenueChart, costChart, growthChart;
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+
+        function formatPercentage(value) {
+            return value.toFixed(2) + '%';
+        }
+
+        function calculateTotalCosts(costs) {
+            return Object.values(costs).reduce((sum, cost) => sum + cost, 0);
+        }
+
+        function updateMetrics() {
+            const data = yearlyData[currentYearIndex];
+            const totalCosts = calculateTotalCosts(data.costs);
+            const netProfit = data.revenue - totalCosts;
+            const profitMargin = (netProfit / data.revenue) * 100;
+
+            document.getElementById('totalUsers').textContent = data.users.toLocaleString();
+            document.getElementById('monthlyRevenue').textContent = formatCurrency(data.revenue);
+            document.getElementById('monthlyCosts').textContent = formatCurrency(totalCosts);
+            document.getElementById('netProfit').textContent = formatCurrency(netProfit);
+            document.getElementById('profitMargin').textContent = formatPercentage(profitMargin);
+            document.getElementById('staffCount').textContent = data.staffCount;
+        }
+
+        function updateCostBreakdown() {
+            const data = yearlyData[currentYearIndex];
+            const totalCosts = calculateTotalCosts(data.costs);
+            const tbody = document.getElementById('costBreakdown');
+            tbody.innerHTML = '';
+
+            // Group costs by category
+            const categories = {
+                'Infrastructure & Hosting': ['Vercel', 'Railway', 'MongoDB', 'AWS', 'CDN', 'Multi-Cloud', 'Database Cluster'],
+                'Security & Compliance': ['Security', 'SSL', 'Penetration', 'Compliance', 'Backup', 'SOC'],
+                'Third-Party Services': ['Stripe', 'Twilio', 'SendGrid', 'Apple', 'Google', 'Communication Services'],
+                'Mobile Applications': ['iOS', 'Android', 'Mobile', 'Push'],
+                'Staff & Salaries': ['CTO', 'Developer', 'DevOps', 'Designer', 'Support', 'Marketing', 'Sales', 'QA', 'Product', 'Data', 'HR', 'Operations', 'Executive', 'Engineering', 'Team'],
+                'Operations & Legal': ['Legal', 'Accounting', 'Office', 'Insurance', 'Corporate'],
+                'Marketing & Growth': ['Marketing', 'Advertising', 'Growth'],
+                'Tools & Software': ['Development', 'Design', 'Project', 'Communication', 'Analytics', 'Enterprise Tools']
+            };
+
+            Object.entries(categories).forEach(([category, keywords]) => {
+                // Add category header
+                const categoryRow = tbody.insertRow();
+                categoryRow.innerHTML = `
+                    <td class="category-header" colspan="5">${category}</td>
+                `;
+
+                let categoryTotal = 0;
+                Object.entries(data.costs).forEach(([service, cost]) => {
+                    if (keywords.some(keyword => service.includes(keyword))) {
+                        const row = tbody.insertRow();
+                        const percentage = ((cost / totalCosts) * 100).toFixed(1);
+                        
+                        row.innerHTML = `
+                            <td>&nbsp;&nbsp;${service}</td>
+                            <td class="cost-item">${formatCurrency(cost)}</td>
+                            <td class="cost-item">${formatCurrency(cost * 12)}</td>
+                            <td>${percentage}%</td>
+                            <td>${getServiceNote(service)}</td>
+                        `;
+                        categoryTotal += cost;
+                    }
+                });
+
+                // Add category subtotal
+                const subtotalRow = tbody.insertRow();
+                subtotalRow.innerHTML = `
+                    <td><strong>&nbsp;&nbsp;${category} Subtotal</strong></td>
+                    <td class="cost-item"><strong>${formatCurrency(categoryTotal)}</strong></td>
+                    <td class="cost-item"><strong>${formatCurrency(categoryTotal * 12)}</strong></td>
+                    <td><strong>${((categoryTotal / totalCosts) * 100).toFixed(1)}%</strong></td>
+                    <td></td>
+                `;
+            });
+
+            // Add total and profit rows
+            const totalRow = tbody.insertRow();
+            totalRow.innerHTML = `
+                <td><strong>TOTAL MONTHLY COSTS</strong></td>
+                <td class="cost-item"><strong>${formatCurrency(totalCosts)}</strong></td>
+                <td class="cost-item"><strong>${formatCurrency(totalCosts * 12)}</strong></td>
+                <td><strong>100%</strong></td>
+                <td></td>
+            `;
+
+            const revenueRow = tbody.insertRow();
+            revenueRow.innerHTML = `
+                <td><strong>MONTHLY REVENUE</strong></td>
+                <td class="revenue-item"><strong>${formatCurrency(data.revenue)}</strong></td>
+                <td class="revenue-item"><strong>${formatCurrency(data.revenue * 12)}</strong></td>
+                <td><strong>-</strong></td>
+                <td>$99/month per user</td>
+            `;
+
+            const profitRow = tbody.insertRow();
+            const netProfit = data.revenue - totalCosts;
+            profitRow.innerHTML = `
+                <td><strong>NET PROFIT</strong></td>
+                <td class="profit-positive"><strong>${formatCurrency(netProfit)}</strong></td>
+                <td class="profit-positive"><strong>${formatCurrency(netProfit * 12)}</strong></td>
+                <td class="profit-positive"><strong>${formatPercentage((netProfit / data.revenue) * 100)}</strong></td>
+                <td>After all expenses</td>
+            `;
+        }
+
+        function getServiceNote(service) {
+            const notes = {
+                'Stripe Processing': 'Payment processing fees',
+                'CTO/Lead Developer': 'Senior technical leadership',
+                'Marketing & Advertising': 'User acquisition & growth',
+                'Office Rent (Dubai)': 'DIFC/Dubai Marina office',
+                'Penetration Testing': 'Quarterly security audits',
+                'SOC 2 Compliance': 'Enterprise compliance requirements',
+                'Multi-Cloud Infrastructure': 'AWS + Azure redundancy'
+            };
+            return notes[service] || '';
+        }
+
+        function createRevenueChart() {
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            const data = yearlyData[currentYearIndex];
+            const totalCosts = calculateTotalCosts(data.costs);
+            
+            if (revenueChart) {
+                revenueChart.destroy();
+            }
+
+            revenueChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Monthly Revenue', 'Monthly Costs', 'Net Profit'],
+                    datasets: [{
+                        label: 'Amount ($)',
+                        data: [data.revenue, totalCosts, data.revenue - totalCosts],
+                        backgroundColor: [
+                            '#28a745',
+                            '#dc3545', 
+                            '#1e5656'
+                        ],
+                        borderColor: [
+                            '#1e7e34',
+                            '#c82333',
+                            '#155757'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createCostChart() {
+            const ctx = document.getElementById('costChart').getContext('2d');
+            const data = yearlyData[currentYearIndex];
+            const totalCosts = calculateTotalCosts(data.costs);
+            
+            if (costChart) {
+                costChart.destroy();
+            }
+
+            // Group costs by major categories
+            const categoryTotals = {
+                'Infrastructure': 0,
+                'Security': 0,
+                'Payment Processing': 0,
+                'Staff Salaries': 0,
+                'Marketing': 0,
+                'Operations': 0,
+                'Other': 0
+            };
+
+            Object.entries(data.costs).forEach(([service, cost]) => {
+                if (service.includes('Vercel') || service.includes('Railway') || service.includes('MongoDB') || 
+                    service.includes('AWS') || service.includes('CDN') || service.includes('Multi-Cloud') || 
+                    service.includes('Database')) {
+                    categoryTotals['Infrastructure'] += cost;
+                } else if (service.includes('Security') || service.includes('SSL') || service.includes('Compliance') || 
+                          service.includes('Backup') || service.includes('SOC')) {
+                    categoryTotals['Security'] += cost;
+                } else if (service.includes('Stripe')) {
+                    categoryTotals['Payment Processing'] += cost;
+                } else if (service.includes('Developer') || service.includes('Manager') || service.includes('Engineer') || 
+                          service.includes('Designer') || service.includes('Support') || service.includes('QA') || 
+                          service.includes('Team') || service.includes('CTO') || service.includes('Executive')) {
+                    categoryTotals['Staff Salaries'] += cost;
+                } else if (service.includes('Marketing') || service.includes('Advertising') || service.includes('Growth')) {
+                    categoryTotals['Marketing'] += cost;
+                } else if (service.includes('Legal') || service.includes('Accounting') || service.includes('Office') || 
+                          service.includes('Insurance') || service.includes('Corporate')) {
+                    categoryTotals['Operations'] += cost;
+                } else {
+                    categoryTotals['Other'] += cost;
+                }
+            });
+
+            const labels = Object.keys(categoryTotals).filter(key => categoryTotals[key] > 0);
+            const values = labels.map(key => categoryTotals[key]);
+
+            costChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: [
+                            '#FF6384',
+                            '#36A2EB', 
+                            '#FFCE56',
+                            '#4BC0C0',
+                            '#9966FF',
+                            '#FF9F40',
+                            '#C9CBCF'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function createGrowthChart() {
+            const ctx = document.getElementById('growthChart').getContext('2d');
+            
+            if (growthChart) {
+                growthChart.destroy();
+            }
+
+            const years = yearlyData.map(d => d.year);
+            const revenues = yearlyData.map(d => d.revenue);
+            const costs = yearlyData.map(d => calculateTotalCosts(d.costs));
+            const profits = yearlyData.map((d, i) => d.revenue - costs[i]);
+            const users = yearlyData.map(d => d.users);
+
+            growthChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: years,
+                    datasets: [
+                        {
+                            label: 'Revenue',
+                            data: revenues,
+                            borderColor: '#28a745',
+                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                            yAxisID: 'y',
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Costs',
+                            data: costs,
+                            borderColor: '#dc3545',
+                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                            yAxisID: 'y',
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Profit',
+                            data: profits,
+                            borderColor: '#1e5656',
+                            backgroundColor: 'rgba(30, 86, 86, 0.1)',
+                            yAxisID: 'y',
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Users',
+                            data: users,
+                            borderColor: '#ff6b35',
+                            backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                            yAxisID: 'y1',
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Year'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Revenue/Costs/Profit ($)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Users'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString();
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateDashboard(index) {
+            currentYearIndex = index;
+            
+            // Update active button
+            document.querySelectorAll('.year-btn').forEach((btn, i) => {
+                btn.classList.toggle('active', i === index);
+            });
+            
+            updateMetrics();
+            updateCostBreakdown();
+            createRevenueChart();
+            createCostChart();
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDashboard(0);
+            createGrowthChart();
+        });
+    </script>
+</body>
+</html>
