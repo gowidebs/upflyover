@@ -269,7 +269,7 @@ const createModels = () => {
 
   const KYCSchema = new mongoose.Schema({
     userId: String,
-    userType: { type: String, enum: ['company', 'individual'] },
+    userType: { type: String, enum: ['company', 'individual'], default: 'company' },
     // Company KYC fields
     businessRegistrationNumber: String,
     taxId: String,
@@ -289,7 +289,10 @@ const createModels = () => {
       emiratesIdBack: String,
       passport: String
     },
-    status: { type: String, default: 'submitted' }
+    status: { type: String, default: 'submitted' },
+    submittedAt: Date,
+    reviewedAt: Date,
+    reviewNotes: String
   }, { timestamps: true });
 
   return {
@@ -329,16 +332,22 @@ const migrateExistingData = async () => {
     for (const company of companies) {
       const exists = await Company.findOne({ email: company.email });
       if (!exists) {
-        await new Company(company).save();
-        console.log('Migrated company:', company.email);
+        // Remove the UUID _id field to let MongoDB generate ObjectId
+        const { id, ...companyData } = company;
+        const newCompany = new Company(companyData);
+        const saved = await newCompany.save();
+        console.log('Migrated company:', company.email, 'New ID:', saved._id);
       }
     }
     
     for (const kyc of kycDocuments) {
-      const exists = await KYCModel.findOne({ companyId: kyc.companyId });
+      const exists = await KYCModel.findOne({ userId: kyc.userId });
       if (!exists) {
-        await new KYCModel(kyc).save();
-        console.log('Migrated KYC:', kyc.companyId);
+        // Remove the UUID _id field to let MongoDB generate ObjectId
+        const { id, companyId, ...kycData } = kyc;
+        const newKyc = new KYCModel({ ...kycData, userId: kyc.userId });
+        await newKyc.save();
+        console.log('Migrated KYC for user:', kyc.userId);
       }
     }
   } catch (error) {
