@@ -1008,22 +1008,37 @@ app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user (company or individual)
-    let user = await DB.findCompany({ email });
+    console.log('Login attempt for:', email);
+
+    // Find user (company or individual) - check both database and in-memory
+    let user = null;
     let userType = 'company';
     
+    // First check in-memory companies
+    user = companies.find(c => c.email === email);
+    
+    if (!user && useDatabase && Company) {
+      // Then check MongoDB
+      user = await Company.findOne({ email });
+    }
+    
     if (!user) {
+      // Check individuals
       user = individuals.find(u => u.email === email);
       userType = 'individual';
     }
 
     if (!user) {
+      console.log('User not found for email:', email);
       return res.status(400).json({ error: 'Invalid credentials' });
     }
+
+    console.log('User found:', { email: user.email, userType, emailVerified: user.emailVerified });
 
     // Check password
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
+      console.log('Invalid password for:', email);
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
@@ -1032,7 +1047,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ 
         error: 'Please verify your email address first',
         requiresVerification: true,
-        userId: user.id,
+        userId: user.id || user._id,
         userType
       });
     }
@@ -1042,20 +1057,22 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(200).json({
         message: 'Please select your account type',
         requiresUserTypeSelection: true,
-        userId: user.id,
+        userId: user.id || user._id,
         email: user.email
       });
     }
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user.id, email: user.email, userType: user.userType },
+      { id: user.id || user._id, email: user.email, userType: user.userType },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
 
     // Return user data without password
     const { password: _, ...userData } = user;
+
+    console.log('Login successful for:', email);
 
     res.json({
       message: 'Login successful',
@@ -2463,7 +2480,27 @@ app.get('/api/requirements/:id/applications', authenticateToken, async (req, res
   }
 });
 
-// Test KYC submission (for testing only)
+// Test endpoints
+app.get('/api/test/accounts', (req, res) => {
+  try {
+    const gowideAccount = companies.find(c => c.email === 'contact@gowide.in');
+    res.json({
+      totalCompanies: companies.length,
+      gowideExists: !!gowideAccount,
+      gowideAccount: gowideAccount ? {
+        email: gowideAccount.email,
+        name: gowideAccount.name,
+        emailVerified: gowideAccount.emailVerified,
+        phoneVerified: gowideAccount.phoneVerified,
+        kycStatus: gowideAccount.kycStatus,
+        accountActive: gowideAccount.accountActive
+      } : null
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/test/kyc', (req, res) => {
   try {
     const { businessRegistrationNumber, taxId, description } = req.body;
