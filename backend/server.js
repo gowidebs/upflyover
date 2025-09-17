@@ -76,7 +76,7 @@ app.get('/api/csrf-token', (req, res) => {
 
 // Skip CSRF for registration endpoints and GET requests
 app.use((req, res, next) => {
-  if (req.path.includes('/api/auth/') || req.path.includes('/api/health') || req.path.includes('/api/csrf-token') || req.method === 'GET') {
+  if (req.path.includes('/api/auth/') || req.path.includes('/api/health') || req.path.includes('/api/csrf-token') || req.path.includes('/api/test/') || req.method === 'GET') {
     return next();
   }
   return csrfProtection(req, res, next);
