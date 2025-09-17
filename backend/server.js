@@ -55,7 +55,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: ['https://upflyover.vercel.app', 'https://gowidetest.click', 'https://www.gowidetest.click', 'http://localhost:3000'],
+    origin: ['https://upflyover.vercel.app', 'https://gowidetest.click', 'https://www.gowidetest.click', 'http://localhost:3000', 'https://upflyover-production.up.railway.app'],
     credentials: true
   }
 });
@@ -64,7 +64,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'upflyover-jwt-secret-key-2024';
 
 // Middleware
 app.use(cors({
-  origin: ['https://upflyover.vercel.app', 'https://gowidetest.click', 'https://www.gowidetest.click', 'http://localhost:3000'],
+  origin: ['https://upflyover.vercel.app', 'https://gowidetest.click', 'https://www.gowidetest.click', 'http://localhost:3000', 'https://upflyover-production.up.railway.app'],
   credentials: true
 }));
 app.use(cookieParser());

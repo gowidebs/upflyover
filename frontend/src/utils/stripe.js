@@ -1,7 +1,9 @@
 import { loadStripe } from '@stripe/stripe-js';
 
-// Initialize Stripe
-const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
+// Initialize Stripe (disabled if no key provided)
+const stripePromise = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY ? 
+  loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY) : 
+  Promise.resolve(null);
 
 // Create checkout session
 export const createCheckoutSession = async (plan, token) => {
