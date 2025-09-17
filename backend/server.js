@@ -2501,6 +2501,37 @@ app.get('/api/test/accounts', (req, res) => {
   }
 });
 
+app.post('/api/test/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    console.log('Test login attempt:', { email, timestamp: new Date() });
+    
+    const user = companies.find(c => c.email === email);
+    if (!user) {
+      return res.status(400).json({ error: 'User not found' });
+    }
+    
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      return res.status(400).json({ error: 'Invalid password' });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Test login successful',
+      user: {
+        email: user.email,
+        name: user.name,
+        emailVerified: user.emailVerified,
+        accountActive: user.accountActive
+      }
+    });
+  } catch (error) {
+    console.error('Test login error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/test/kyc', (req, res) => {
   try {
     const { businessRegistrationNumber, taxId, description } = req.body;
