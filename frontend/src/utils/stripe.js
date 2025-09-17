@@ -8,7 +8,7 @@ const stripePromise = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY ?
 // Create checkout session
 export const createCheckoutSession = async (plan, token) => {
   try {
-    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/payments/create-checkout`, {
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/payments/create-checkout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -33,7 +33,7 @@ export const createCheckoutSession = async (plan, token) => {
 // Get subscription status
 export const getSubscriptionStatus = async (token) => {
   try {
-    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/payments/subscription`, {
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/payments/subscription`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`
@@ -56,7 +56,7 @@ export const getSubscriptionStatus = async (token) => {
 // Cancel subscription
 export const cancelSubscription = async (token) => {
   try {
-    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/payments/cancel-subscription`, {
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/payments/cancel-subscription`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`
@@ -79,7 +79,7 @@ export const cancelSubscription = async (token) => {
 // Create billing portal session
 export const createBillingPortalSession = async (token) => {
   try {
-    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/payments/billing-portal`, {
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/payments/billing-portal`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`

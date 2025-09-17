@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://upflyover-production-4d33.up.railway.app';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://upflyover-production-4d33.up.railway.app/api';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -13,7 +13,7 @@ const api = axios.create({
 const initCSRF = async () => {
   try {
     if (!localStorage.getItem('csrfToken')) {
-      const response = await api.get('/api/csrf-token');
+      const response = await api.get('/csrf-token');
       localStorage.setItem('csrfToken', response.data.csrfToken);
     }
   } catch (error) {
